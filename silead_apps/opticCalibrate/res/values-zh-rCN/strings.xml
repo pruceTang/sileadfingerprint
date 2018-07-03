@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_name">指纹校准</string>
+
+    <string name="globle_back_btn_title">返回</string>
+    <string name="calibrate_btn_title">开始校准</string>
+    <string name="msg_pls_use_fake_finger_calibrate">"请用塑胶假手指进行校准！"</string>
+
+    <string name="calibrate_result_success">成功</string>
+    <string name="calibrate_result_fail">失败</string>
+
+</resources>

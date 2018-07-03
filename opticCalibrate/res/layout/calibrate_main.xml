@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/MainFrameStyle"
+    android:orientation="vertical" >
+
+    <LinearLayout
+        style="@style/TestResultContentStyle"
+        android:orientation="vertical" >
+
+        <TextView
+            android:id="@+id/calibrate_result"
+            android:layout_width="fill_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/msg_pls_use_fake_finger_calibrate"
+            android:textSize="16sp" />
+
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
+
+            <Button
+                android:id="@+id/calibrate_btn"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@drawable/selector"
+                android:text="@string/calibrate_btn_title"
+                android:textColor="#FFFFFF" />
+
+            <Button
+                android:id="@+id/calibrate_step1_btn"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/calibrate_step1_btn_title" />
+
+            <Button
+                android:id="@+id/calibrate_step2_btn"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/calibrate_step2_btn_title" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
+
+            <Button
+                android:id="@+id/calibrate_step3_btn"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/calibrate_step3_btn_title" />
+
+            <Button
+                android:id="@+id/calibrate_step4_btn"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/calibrate_step4_btn_title" />
+
+            <Button
+                android:id="@+id/calibrate_step5_btn"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/calibrate_step5_btn_title" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/ui_top_des"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/calibrate_desc"
+            android:textSize="12sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <include layout="@layout/ui_include_preference_main" />
+
+</LinearLayout>

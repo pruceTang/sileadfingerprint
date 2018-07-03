@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android" >
+     <!--设置按钮点击时，点击后，按钮这2种状态的改变和设置-->
+     <!--按钮按下时的设置  -->
+     <item android:state_pressed="true" android:drawable="@color/gray"/>
+    <!--按钮松开时的设置  -->
+     <item android:state_pressed="false" android:drawable="@color/darkslategray"/>
+     <!--按钮被选中后显示的图片  ,对Android好像并没有什么用！-->
+    <item android:state_focused="true" android:drawable="@color/darkslategray"/>
+</selector>

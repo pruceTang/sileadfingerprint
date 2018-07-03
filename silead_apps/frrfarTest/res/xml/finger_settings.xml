@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <PreferenceCategory android:title="@string/finger_settings_enroll_title" >
+        <EditTextPreference
+            android:key="finger_settings_enroll_sample_count"
+            android:numeric="integer"
+            android:persistent="false"
+            android:title="@string/finger_settings_enroll_sample_count_title" />
+
+        <MultiSelectListPreference
+            android:entries="@array/finger_settings_enroll_finger_string"
+            android:entryValues="@array/finger_settings_enroll_finger_values"
+            android:key="finger_settings_enroll_finger"
+            android:persistent="false"
+            android:title="@string/finger_settings_enroll_finger_title" />
+
+        <Preference
+            android:key="finger_settings_enroll_data_path"
+            android:persistent="false"
+            android:title="@string/finger_settings_enroll_data_path_title" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/finger_settings_test_title" >
+        <CheckBoxPreference
+            android:key="finger_settings_test_farfrr_img_result"
+            android:persistent="false"
+            android:summary="@string/finger_settings_test_farfrr_img_result_desc"
+            android:title="@string/finger_settings_test_farfrr_img_result_title" />
+
+        <CheckBoxPreference
+            android:key="finger_settings_test_far_run_frr_first"
+            android:persistent="false"
+            android:summary="@string/finger_settings_test_far_run_frr_first_desc"
+            android:title="@string/finger_settings_test_far_run_frr_first_title" />
+
+        <CheckBoxPreference
+            android:key="finger_settings_test_gather_finger"
+            android:persistent="false"
+            android:summary="@string/finger_settings_test_gather_finger_desc"
+            android:title="@string/finger_settings_test_gather_finger_title" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

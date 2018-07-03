@@ -1,0 +1,247 @@
+#===========================================================================
+#  Copyright (c) 2016-2017 Silead Inc.
+#  All Rights Reserved.
+#  Silead Confidential and Proprietary
+#===========================================================================
+#
+# App Core
+#
+# GENERAL DESCRIPTION
+#    build script
+#                      EDIT HISTORY FOR FILE
+#
+#  This section contains schedulerents describing changes made to the module.
+#  Notice that changes are listed in reverse chronological order.
+#
+# when       who     what, where, why
+# --------   ---     ---------------------------------------------------------
+# 07/01/17  Bill Yu   Created
+#===============================================================================
+import pdb
+
+Import('env')
+env = env.Clone()
+
+if env.has_key('USES_NO_CP'):
+  env.Append(CCFLAGS = ' -DUSES_NO_CP ')
+
+#------------------------------------------------------------------------------
+# We need to specify "neon" to generate SIMD instructions in 32-bit mode
+#------------------------------------------------------------------------------
+if env['PROC'] == 'scorpion':
+  env.Append(CCFLAGS = " -mfpu=neon ")
+else:
+  env.Append(CCFLAGS = " -DAARCH64_SUPPORT ")
+
+env.Append(CPPDEFINES = 'SILEADTA=1')
+
+# env.Append(SIL_WRAP_MEM = 'yes')
+# env.Append(SIL_CB = 'yes')
+# env.Append(SIL_CB_SPI = 'yes')
+# env.Append(SIL_ALGO_FAKE = 'yes')
+
+#-------------------------------------------------------------------------------
+# Source PATH
+#-------------------------------------------------------------------------------
+SRCPATH = "${BUILD_ROOT}/apps/securemsm/trustzone/qsapps/sileadta/src"
+
+env.VariantDir('${BUILDPATH}', SRCPATH, duplicate=0)
+
+#-------------------------------------------------------------------------------
+# Compiler, object, and linker definitions
+#-------------------------------------------------------------------------------
+
+# do not generate thumb code for inline assembler code
+env.Append(CCFLAGS = ' -DQSEE_V4')
+#env.Append(CCFLAGS = ' -DSIL_SOTER_SUPPORT')
+env.Append(CCFLAGS = ' -DSECURE_QSEE')
+env.Append(CCFLAGS = ' -DSIL_SEC_STORE')
+#env.Append(CCFLAGS = ' -DSIL_IDIV0')
+#env.Append(CCFLAGS = ' -DSECURE_QSEE -DSIL_TOKEN_FAKE')
+#env.Append(CCFLAGS = ' -DSIL_DUMP_IMG')
+
+env.Append(CCFLAGS = ' -fPIC')
+
+env.Append(LINKFLAGS = ' -shared -fPIC')
+
+if env.has_key('SIL_WRAP_MEM'):
+	env.Append(CCFLAGS = ' -DQSEE_WRAP_MEM')
+	env.Append(LINKFLAGS = ' --wrap malloc ')
+	env.Append(LINKFLAGS = ' --wrap realloc ')
+	env.Append(LINKFLAGS = ' --wrap free ')
+
+if env.has_key('SIL_ALGO_FAKE'):
+	env.Append(CCFLAGS = ' -DSIL_ALGO_FAKE')
+
+if env.has_key('SIL_CB_SPI'):
+	env.Append(CCFLAGS = ' -DSECURE_QSEE_CB')
+
+if env.has_key('SIL_CB'):
+	env.Append(CCFLAGS = ' -DSECURE_QSEE_CUSTOM_MALLOC')
+
+#env.Append(CCFLAGS = ' -DSIL_CUST_MEMSIZE=2*1024*1024')
+
+includes = ['#../../apps/securemsm/trustzone/qsapps/sileadta/src/ta',
+            '#../../apps/securemsm/trustzone/qsapps/sileadta/src/ta/include',
+            '#../../apps/securemsm/trustzone/qsapps/sileadta/src/ta/qsee',
+            '#../../apps/securemsm/trustzone/qsapps/sileadta/src/core/include',
+            '#../../apps/securemsm/trustzone/qsapps/sileadta/src/ta/qsee/include',
+            '#../../apps/securemsm/trustzone/qsapps/sileadta/src/ta/qsee/extend',
+            '#../../apps/securemsm/trustzone/qsapps/sileadta/src/config',
+            '#../../core/api/kernel/libstd/stringl',
+            '#../../app/securemsm/trustzone/qsapps/smplserv/inc',
+            '#../../core/api/boot/qfprom',
+            '#../../core/securemsm/secmath/shared/inc',
+            '#../../ssg/api/securemsm/trustzone/gp',
+            '#../../core/securemsm/trustzone/qsapps/libs/applib/qsee/src',
+            '#../../core/securemsm/sse/qsee/SecureUILib/include',
+            '#../../core/securemsm/sse/qsee/SecureTouch/drTs/include',
+            '#../../ssg/securemsm/trustzone/qsapps/libs/biometric/inc',
+            '#../../core/kernel/smmu/ACv3.0/common/inc/',
+            '#../../core/securemsm/trustzone/qsee/mink/include',
+            '#../../ssg/securemsm/trustzone/qsapps/common',
+           ]
+
+#----------------------------------------------------------------------------
+# App core Objects
+#----------------------------------------------------------------------------
+sources = [
+        '../src/ta/qsee/silead_ta_entry.c',
+]
+
+#-------------------------------------------------------------------------------
+# Add Libraries to image
+#-------------------------------------------------------------------------------
+SILEAD_IMPL_LIB_SOURCES = [
+        '../src/ta/qsee/silead_fp_memory.c',
+        '../src/ta/qsee/silead_fp_spi.c',
+        '../src/ta/qsee/silead_fp_storage.c',
+        '../src/ta/qsee/silead_fp_token.c',
+        '../src/ta/qsee/silead_fp_util.c',
+        '../src/config/silead_config.c',
+        '../src/ta/silead_log_ctrl.c',
+]
+sources.extend(SILEAD_IMPL_LIB_SOURCES)
+
+if env.has_key('SIL_CB'):
+	SILEAD_CB_LIB_SOURCES = [
+        '../src/ta/qsee/extend/silead_fp_cb_impl.c',
+        '../src/ta/qsee/extend/silead_fp_custom_mem.c',
+        '../src/ta/qsee/extend/silead_fp_spi_cb.c',
+        '../src/ta/qsee/extend/silead_fp_util_extend.c',
+]
+
+if env.has_key('SIL_CB'):
+	sources.extend(SILEAD_CB_LIB_SOURCES)
+
+#-------------------------------------------------------------------------------
+# Add Libraries to image
+#-------------------------------------------------------------------------------
+
+SILEAD_ALGO_FAKE_LIB_SOURCES = [
+    '../src/algo/algo_fake.c',
+]
+if env.has_key('SIL_ALGO_FAKE'):
+	sources.extend(SILEAD_ALGO_FAKE_LIB_SOURCES)
+
+SILEAD_ALGO_LIB_SOURCES = [
+     '../src/algo/b_imageCorrect.c',
+     '../src/algo/b_imageInsert.c',
+     '../src/algo/bal_periodic_interferce.c',
+     '../src/algo/bal_remove_noise.c',
+     '../src/algo/enhance.c',
+     '../src/algo/fft16_.c',
+     '../src/algo/fft32_.c',
+     '../src/algo/fftn.c',
+     '../src/algo/FineTune.c',
+     '../src/algo/FingerDetect.c',
+     '../src/algo/SL_Math.c',
+     '../src/algo/slfp_algadapter.c',
+     '../src/algo/split_fft.c',
+     '../src/algo/pb/pb_corrent.c',
+#     '../src/algo/FpNavi.c',
+]
+if env.has_key('SIL_ALGO_SRC'):
+	sources.extend(SILEAD_ALGO_LIB_SOURCES)
+
+#-------------------------------------------------------------------------------
+# Add Libraries to image
+#-------------------------------------------------------------------------------
+if env['PROC'] == 'scorpion':
+   silead_core_lib       = [ env.File(SRCPATH + '/../lib/qsee4/libsilfp_core.lib') ]
+   silead_algorithm_lib  = [ env.File(SRCPATH + '/../lib/qsee4/libsilfp_algo_neon.lib') ]
+   silead_preprocess_lib = [ env.File(SRCPATH + '/../lib/qsee4/libsilfp_prepro_ei_neon_x1.lib') ]
+   silead_fakenavi_lib   = [ env.File(SRCPATH + '/../lib/qsee4/libsilfp_fakenavi.lib') ]
+else:
+   silead_core_lib       = [ env.File(SRCPATH + '/../lib64/qsee4/libsilfp_core.lib') ]
+   silead_algorithm_lib  = [ env.File(SRCPATH + '/../lib64/qsee4/libsilfp_algo.lib') ]
+   silead_preprocess_lib = [ env.File(SRCPATH + '/../lib64/qsee4/libsilfp_prepro.lib') ]
+   silead_fakenavi_lib   = [ env.File(SRCPATH + '/../lib64/qsee4/libsilfp_fakenavi.lib') ]
+
+if env['PROC'] == 'scorpion':
+  arm_libs = [
+   env.File(env.SubstRealPath('${MUSL32PATH}/lib/libc.a')),
+   env.File(env.SubstRealPath('${LLVMLIB}/libclang_rt.builtins-arm.a'))
+  ]
+else:
+  arm_libs = [
+   env.File(env.SubstRealPath('${MUSLPATH}/lib/libc.a')),
+   env.File(env.SubstRealPath('${LLVMLIB}/libclang_rt.builtins-arm.a'))
+  ]
+
+libs = [
+   silead_core_lib,
+   silead_algorithm_lib,
+   silead_preprocess_lib,
+   #silead_fakenavi_lib,
+   arm_libs
+]
+#libs.extend(silead_fakenavi_lib)
+#libs.extend(arm_libs)
+
+#-------------------------------------------------------------------------------
+# Add metadata to image
+#-------------------------------------------------------------------------------
+if env['PROC'] == 'scorpion':
+  target_name = 'sileadta'
+  app_name = 'fingerprint'
+else:
+  target_name = 'sileadta64'
+  app_name = 'fingerprint'
+
+#-------------------------------------------------------------------------------
+# Add metadata to image
+#-------------------------------------------------------------------------------
+md = {
+   'appName':    app_name,
+   'privileges': ['default',
+                  'I2C',
+                  'OEMUnwrapKeys',
+                  'CertValidate',
+                  'SPI',
+                  'TLMM',
+                  'SecureDisplay',
+                  'IntMask',
+                  'OEMBuf',
+                  'TransNSAddr',
+                 ],
+  'stackSize' : 0x200000,  # 70 kbyte stack
+  'heapSize'  : 0x800000  #  7 Mbyte stack
+}
+
+if env['PROC'] == 'scorpion':
+  md['memoryType'] = 'Unprotected'
+
+deploy_header_files = env.Glob('../ta/*')
+
+sileadta_units = env.SecureAppBuilder(
+  sources = sources,
+  includes = includes,
+  user_libs = libs,
+  metadata = md,
+  image = target_name,
+  deploy_sources = sources + ['SConscript'] + deploy_header_files
+)
+
+for image in env['IMAGE_ALIASES']:
+  op = env.Alias(image, sileadta_units)

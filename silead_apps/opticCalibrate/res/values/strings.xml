@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_name">"Fingerprint Calibration"</string>
+
+    <string name="globle_back_btn_title">"Back"</string>
+    <string name="calibrate_btn_title">"Start Calibrate"</string>
+    <string name="msg_pls_use_fake_finger_calibrate">"Please use the plastic finger to calibrate!"</string>
+
+    <string name="calibrate_step1_btn_title">Level5</string>
+    <string name="calibrate_step2_btn_title">Level4</string>
+    <string name="calibrate_step3_btn_title">Level3</string>
+    <string name="calibrate_step4_btn_title">Level2</string>
+    <string name="calibrate_step5_btn_title">Level1</string>
+    <string name="calibrate_desc">"使用平头假手指，调整OLED亮度到正常使用的level5, level4, level3, level2, level1分别进行测试"</string>
+    <string name="calibrate_result_success">"Pass"</string>
+    <string name="calibrate_result_fail">"Failed"</string>
+
+</resources>
