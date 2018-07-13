@@ -29,6 +29,8 @@
  * Martin Wu  2018/6/26   0.2.1      Add optical middle tone base param
  * Martin Wu  2018/6/27   0.2.2      Add SPI check 0xBF front porch.
  * Martin Wu  2018/6/30   0.2.3      Add distortion & finger_num param.
+ * Martin Wu  2018/7/4    0.2.4      Add AEC param.
+ * Martin Wu  2018/7/6    0.2.5      Add dead pixel radius.
  *
  *****************************************************************************/
 
@@ -527,10 +529,21 @@ static int32_t _xml_param_get_sysparam(const XMLElement *rootElement, cf_set_t* 
             XML_UPD_VALUE_UINT_HEX_2(algElement, "snr_cut", pcfgs, mmi, snr_cut, value32);
             XML_UPD_VALUE_UINT_2(algElement, "base_size", pcfgs, mmi, base_size, value32, uint8_t);
             XML_UPD_VALUE_UINT_2(algElement, "snr_img_num", pcfgs, mmi, snr_img_num, value32, uint8_t);
-            XML_UPD_VALUE_UINT_2(algElement, "snrThr", pcfgs, mmi, snr_thr, value32, uint8_t);
+            XML_UPD_VALUE_INT_2(algElement, "snrThr", pcfgs, mmi, snr_thr, valuei32, int16_t);
             XML_UPD_VALUE_UINT_2(algElement, "distortion", pcfgs, mmi, distortion, value32, uint8_t);
             XML_UPD_VALUE_UINT_2(algElement, "finger_num", pcfgs, mmi, finger_num, value32, uint8_t);
+            XML_UPD_VALUE_UINT_2(algElement, "storage_interval", pcfgs, mmi, storage_interval, value32, uint8_t);
             XML_UPD_VALUE_UINT_2(algElement, "sum_type", pcfgs, mmi, sum_type, value32, uint8_t);
+            XML_UPD_VALUE_UINT_2(algElement, "dpx_radius", pcfgs, mmi, deadpx_radius, value32, uint8_t);
+            XML_UPD_VALUE_UINT_2(algElement, "auth_reverse_grey", pcfgs, mmi, auth_reverse_grey, value32, uint8_t);
+
+            XML_UPD_VALUE_UINT_HEX_2(algElement, "shutterleft", pcfgs, aec, left, value32);
+            XML_UPD_VALUE_UINT_HEX_2(algElement, "shutterright", pcfgs, aec, right, value32);
+            XML_UPD_VALUE_UINT_2(algElement, "aec_maxlooptime", pcfgs, aec, max_loop, value32, uint8_t);
+            XML_UPD_VALUE_UINT_2(algElement, "aec_meanMin", pcfgs, aec, mean_min, value32, uint8_t);
+            XML_UPD_VALUE_UINT_2(algElement, "aec_meanMax", pcfgs, aec, mean_max, value32, uint8_t);
+            XML_UPD_VALUE_UINT_2(algElement, "aec_sram_time", pcfgs, aec, time, value32, uint8_t);
+            XML_UPD_VALUE_UINT_2(algElement, "aec_pclk", pcfgs, aec, pclk, value32, uint8_t);
 
             XML_UPD_VALUE_UINT_2(algElement, "ft_line_step_min", pcfgs, ft, line_step_min, value32, uint8_t);
             XML_UPD_VALUE_UINT_2(algElement, "ft_ignore", pcfgs, ft, ignore, value32, uint8_t);
@@ -540,6 +553,14 @@ static int32_t _xml_param_get_sysparam(const XMLElement *rootElement, cf_set_t* 
             XML_UPD_VALUE_INT_2(algElement, "ft_line_distance_min", pcfgs, ft, line_distance_min, valuei32, int16_t);
             XML_UPD_VALUE_INT_2(algElement, "ft_line_distance_max", pcfgs, ft, line_distance_max, valuei32, int16_t);
             XML_UPD_VALUE_UINT_HEX_2(algElement, "ft_cut", pcfgs, ft, cut, value32);
+
+            XML_UPD_VALUE_UINT_3(algElement, "touch_center_x", pcfgs, mmi, touch_info, center_x, value32, uint32_t);
+            XML_UPD_VALUE_UINT_3(algElement, "touch_center_y", pcfgs, mmi, touch_info, center_y, value32, uint32_t);
+            XML_UPD_VALUE_UINT_3(algElement, "touch_b1_distance_threshold", pcfgs, mmi, touch_info, b1_distance_threshold, value32, uint32_t);
+            XML_UPD_VALUE_UINT_3(algElement, "touch_b2_distance_threshold", pcfgs, mmi, touch_info, b2_distance_threshold, value32, uint32_t);
+            XML_UPD_VALUE_UINT_3(algElement, "touch_b2_b1_distance_threshold", pcfgs, mmi, touch_info, b2_b1_distance_threshold, value32, uint32_t);
+            XML_UPD_VALUE_UINT_3(algElement, "touch_c1_coverage_threshold", pcfgs, mmi, touch_info, c1_coverage_threshold, value32, uint32_t);
+            XML_UPD_VALUE_UINT_3(algElement, "touch_c2_coverage_threshold", pcfgs, mmi, touch_info, c2_coverage_threshold, value32, uint32_t);
         }
 
     } while (0);

@@ -254,7 +254,7 @@ static int32_t _bmp_get_save_file_path(char *path, const char *prefix, const uin
         if (prefix) {
             snprintf(path, len, "/data/system/silead/%04d-%s-%04d%02d%02d-%02d%02d%02d.bmp",
                      index++, prefix, (1900 + p->tm_year), ( 1 + p->tm_mon), p->tm_mday,
-                     (p->tm_hour + 12), p->tm_min, p->tm_sec);
+                     p->tm_hour, p->tm_min, p->tm_sec);
         } else {
             snprintf(path, len, "/data/system/users/0/fpdata/%04d.bmp", index++);
         }

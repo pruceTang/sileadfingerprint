@@ -42,6 +42,7 @@
 #define _tz_send_modified_command_1d(cmd, p, l, d)                          silfp_ca_send_modified_command(cmd, p, l, 0, d, 0, NULL, NULL)
 #define _tz_send_modified_command_2r(cmd, p, l, r1, r2)                     silfp_ca_send_modified_command(cmd, p, l, 0, 0, 0, r1, r2)
 #define _tz_send_modified_command_1d_1r_and_get(cmd, p, l, d1, r1)          silfp_ca_send_modified_command(cmd, p, l, 2, d1, 0, r1, NULL)
+#define _tz_send_modified_command_1d_2r_and_get(cmd, p, l, d1, r1, r2)      silfp_ca_send_modified_command(cmd, p, l, 2, d1, 0, r1, r2)
 #define _tz_send_modified_command_get(cmd, p, l)                            silfp_ca_send_modified_command(cmd, p, l, 1, 0, 0, NULL, NULL)
 #define _tz_send_modified_command_get_1r(cmd, p, l, r)                      silfp_ca_send_modified_command(cmd, p, l, 1, 0, 0, r, NULL)
 #define _tz_send_modified_command_get_2r(cmd, p, l, r1, r2)                 silfp_ca_send_modified_command(cmd, p, l, 1, 0, 0, r1, r2)
@@ -56,6 +57,7 @@
 #define _tz_send_normal_command_3r(cmd, p1, p2, p3)                     silfp_ca_send_normal_command(cmd, 0, 0, 0, 0, p1, p2, p3)
 #define _tz_send_normal_command_1d_2r(cmd, d1, p1, p2)                  silfp_ca_send_normal_command(cmd, d1, 0, 0, 0, p1, p2, NULL)
 #define _tz_send_normal_command_2d_1r(cmd, d1, d2, p1)                  silfp_ca_send_normal_command(cmd, d1, d2, 0, 0, p1, NULL, NULL)
+#define _tz_send_normal_command_3d_1r(cmd, d1, d2, d3, p1)              silfp_ca_send_normal_command(cmd, d1, d2, d3, 0, p1, NULL, NULL)
 #define _tz_send_normal_command_4d_2r(cmd, d1, d2, d3, d4, p1, p2)      silfp_ca_send_normal_command(cmd, d1, d2, d3, d4, p1, p2, NULL)
 #define _tz_send_normal_command_4d_3r(cmd, d1, d2, d3, d4, p1, p2, p3)  silfp_ca_send_normal_command(cmd, d1, d2, d3, d4, p1, p2, p3)
 
@@ -107,9 +109,9 @@ static int32_t fp_tz_auth_start(void)
     return _tz_send_normal_command(TZ_FP_CMD_AUTH_START);
 }
 
-static int32_t fp_tz_auth_step(uint64_t op_id, uint32_t *fid)
+static int32_t fp_tz_auth_step(uint64_t op_id, uint32_t step, uint32_t *fid)
 {
-    return _tz_send_normal_command_2d_1r(TZ_FP_CMD_AUTH_STEP, (uint32_t)(op_id >> 32), (uint32_t)op_id, fid);
+    return _tz_send_normal_command_3d_1r(TZ_FP_CMD_AUTH_STEP, (uint32_t)(op_id >> 32), (uint32_t)op_id, step, fid);
 }
 
 static int32_t fp_tz_auth_end(void)
@@ -415,7 +417,7 @@ int32_t fp_tz_alg_set_param(uint32_t cmd, void *buffer, uint32_t *plen, uint32_t
         return -SL_ERROR_BAD_PARAMS;
     }
 
-    return _tz_send_modified_command_get_1d_2r(TZ_FP_CMD_SET_ALG_PARAM, buffer, *plen, cmd, plen, result);
+    return _tz_send_modified_command_1d_2r_and_get(TZ_FP_CMD_SET_ALG_PARAM, buffer, *plen, cmd, plen, result);
 }
 
 static int32_t fp_tz_chk_esd(void)

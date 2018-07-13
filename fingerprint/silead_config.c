@@ -30,6 +30,8 @@
  * Martin Wu  2018/6/26   0.2.1      Add optical middle tone base param
  * Martin Wu  2018/6/27   0.2.2      Add SPI check 0xBF front porch.
  * Martin Wu  2018/6/30   0.2.3      Add distortion & finger_num param.
+ * Martin Wu  2018/7/4    0.2.4      Add AEC param.
+ * Martin Wu  2018/7/6    0.2.5      Add dead pixel radius.
  *
  *****************************************************************************/
 
@@ -66,6 +68,7 @@ typedef struct __attribute__ ((packed)) _sl_upd_set {
     cf_pb_upd pb;
     cf_test_t test;
     cf_mmi_t mmi;
+    cf_aec_t aec;
     cf_ft_t ft;
     cf_esd_t esd;
     cf_data_upd_t cfg[CFG_MAX];
@@ -291,6 +294,7 @@ int32_t silfp_cfg_get_update_buffer(void *buffer, const uint32_t len, const cf_s
     memcpy(&pcfg_upd->pb.threshold, &pcfgs->pb.threshold, sizeof(pcfg_upd->pb.threshold));
     memcpy(&pcfg_upd->test, &pcfgs->test, sizeof(pcfg_upd->test));
     memcpy(&pcfg_upd->mmi, &pcfgs->mmi, sizeof(pcfg_upd->mmi));
+    memcpy(&pcfg_upd->aec, &pcfgs->aec, sizeof(pcfg_upd->aec));
     memcpy(&pcfg_upd->ft, &pcfgs->ft, sizeof(pcfg_upd->ft));
     memcpy(&pcfg_upd->esd, &pcfgs->esd, sizeof(pcfg_upd->esd));
 
@@ -305,6 +309,8 @@ int32_t silfp_cfg_get_update_buffer(void *buffer, const uint32_t len, const cf_s
     }
     LOG_MSG_VERBOSE("test.updated = %d", pcfgs->test.updated);
     LOG_MSG_VERBOSE("mmi.updated = %d", pcfgs->mmi.updated);
+    LOG_MSG_VERBOSE("mmi.touch_info.updated = %d", pcfgs->mmi.touch_info.updated);
+    LOG_MSG_VERBOSE("aec.updated = %d", pcfgs->aec.updated);
     LOG_MSG_VERBOSE("ft.updated = %d", pcfgs->ft.updated);
     LOG_MSG_VERBOSE("esd.updated = %d", pcfgs->esd.updated);
     LOG_MSG_VERBOSE("pb.agc.updated = %d", pcfgs->pb.agc.updated);
@@ -497,7 +503,28 @@ int32_t silfp_cfg_update_config(const void *buffer, const uint32_t len, cf_set_t
     GET_UPD_VALUE_2(psyscfgs, pcfg_upd, mmi, snr_thr);
     GET_UPD_VALUE_2(psyscfgs, pcfg_upd, mmi, distortion);
     GET_UPD_VALUE_2(psyscfgs, pcfg_upd, mmi, finger_num);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, mmi, storage_interval);
     GET_UPD_VALUE_2(psyscfgs, pcfg_upd, mmi, sum_type);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, mmi, deadpx_radius);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, mmi, auth_reverse_grey);
+
+    GET_UPD_VALUE_3(psyscfgs, pcfg_upd, mmi, touch_info, center_x);
+    GET_UPD_VALUE_3(psyscfgs, pcfg_upd, mmi, touch_info, center_y);
+    GET_UPD_VALUE_3(psyscfgs, pcfg_upd, mmi, touch_info, b1_distance_threshold);
+    GET_UPD_VALUE_3(psyscfgs, pcfg_upd, mmi, touch_info, b2_distance_threshold);
+    GET_UPD_VALUE_3(psyscfgs, pcfg_upd, mmi, touch_info, b2_b1_distance_threshold);
+    GET_UPD_VALUE_3(psyscfgs, pcfg_upd, mmi, touch_info, c1_coverage_threshold);
+    GET_UPD_VALUE_3(psyscfgs, pcfg_upd, mmi, touch_info, c2_coverage_threshold);
+
+    // aec update
+    LOG_MSG_VERBOSE("aec.updated = %d", pcfg_upd->aec.updated);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, aec, left);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, aec, right);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, aec, max_loop);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, aec, mean_min);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, aec, mean_max);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, aec, time);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, aec, pclk);
 
     // ft update
     LOG_MSG_VERBOSE("ft.updated = %d", pcfg_upd->ft.updated);

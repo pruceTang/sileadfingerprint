@@ -29,6 +29,8 @@
  * Martin Wu  2018/6/26   0.2.1      Add optical middle tone base param
  * Martin Wu  2018/6/27   0.2.2      Add SPI check 0xBF front porch.
  * Martin Wu  2018/6/30   0.2.3      Add distortion & finger_num param.
+ * Martin Wu  2018/7/4    0.2.4      Add AEC param.
+ * Martin Wu  2018/7/6    0.2.5      Add dead pixel radius.
  *
  *****************************************************************************/
 
@@ -250,6 +252,17 @@ typedef struct __attribute__ ((packed)) _sl_common {
     uint32_t updated;
 } cf_common_t;
 
+typedef struct __attribute__ ((packed)) _sl_tp_info {
+    uint32_t center_x;
+    uint32_t center_y;
+    uint32_t b1_distance_threshold;
+    uint32_t b2_distance_threshold;
+    uint32_t b2_b1_distance_threshold;
+    uint32_t c1_coverage_threshold;
+    uint32_t c2_coverage_threshold;
+    uint32_t updated;
+} cf_touch_info_t;
+
 typedef struct __attribute__ ((packed)) _sl_mmi {
     uint16_t dac_min;
     uint16_t dac_max;
@@ -272,12 +285,27 @@ typedef struct __attribute__ ((packed)) _sl_mmi {
     uint32_t snr_cut;
     uint8_t base_size;
     uint8_t snr_img_num;
-    uint8_t snr_thr;
+    uint16_t snr_thr;
     uint8_t distortion;
     uint8_t finger_num;
+    uint8_t storage_interval;
     uint8_t sum_type;
+    uint8_t deadpx_radius;
+    uint8_t auth_reverse_grey;
+    cf_touch_info_t touch_info;
     uint32_t updated;
 } cf_mmi_t;
+
+typedef struct __attribute__ ((packed)) _sl_aec {
+    uint32_t left;
+    uint32_t right;
+    uint8_t max_loop;
+    uint8_t mean_min;
+    uint8_t mean_max;
+    uint8_t time;
+    uint8_t pclk;
+    uint32_t updated;
+} cf_aec_t;
 
 typedef struct __attribute__ ((packed)) _sl_ft {
     uint8_t line_step_min;
@@ -310,6 +338,7 @@ typedef struct __attribute__ ((packed)) _sl_config_set {
     cf_pb_config_t pb;
     cf_test_t test;
     cf_mmi_t mmi;
+    cf_aec_t aec;
     cf_ft_t ft;
     cf_esd_t esd;
     cf_mode_config_t cfg[CFG_MAX];
@@ -432,7 +461,26 @@ uint32_t silfp_cfg_xml_config_support(void);
 #define cfg_upd_index_mmi_snr_thr               21
 #define cfg_upd_index_mmi_distortion            22
 #define cfg_upd_index_mmi_finger_num            23
-#define cfg_upd_index_mmi_sum_type              24
+#define cfg_upd_index_mmi_storage_interval      24
+#define cfg_upd_index_mmi_sum_type              25
+#define cfg_upd_index_mmi_deadpx_radius         26
+#define cfg_upd_index_mmi_auth_reverse_grey     27
+
+#define cfg_upd_index_mmi_touch_info_center_x                   0
+#define cfg_upd_index_mmi_touch_info_center_y                   1
+#define cfg_upd_index_mmi_touch_info_b1_distance_threshold      2
+#define cfg_upd_index_mmi_touch_info_b2_distance_threshold      3
+#define cfg_upd_index_mmi_touch_info_b2_b1_distance_threshold   4
+#define cfg_upd_index_mmi_touch_info_c1_coverage_threshold      5
+#define cfg_upd_index_mmi_touch_info_c2_coverage_threshold      6
+
+#define cfg_upd_index_aec_left                  1
+#define cfg_upd_index_aec_right                 2
+#define cfg_upd_index_aec_max_loop              3
+#define cfg_upd_index_aec_mean_min              4
+#define cfg_upd_index_aec_mean_max              5
+#define cfg_upd_index_aec_time                  6
+#define cfg_upd_index_aec_pclk                  7
 
 #define cfg_upd_index_ft_line_step_min      0
 #define cfg_upd_index_ft_ignore             1

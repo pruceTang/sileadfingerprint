@@ -30,6 +30,8 @@
  * Martin Wu  2018/6/26   0.2.2      Add optical middle tone base param
  * Martin Wu  2018/6/27   0.2.3      Add SPI check 0xBF front porch.
  * Martin Wu  2018/6/30   0.2.4      Add distortion & finger_num param.
+ * Martin Wu  2018/7/4    0.2.5      Add AEC param.
+ * Martin Wu  2018/7/6    0.2.6      Add dead pixel radius.
  *
  *****************************************************************************/
 
@@ -534,7 +536,31 @@ void silfp_cfg_dump_data(const cf_set_t *pcfgs, char *board_module, int32_t upda
         DUMP_STRUCT_ITEM_2(8, mmi, snr_thr);
         DUMP_STRUCT_ITEM_2(8, mmi, distortion);
         DUMP_STRUCT_ITEM_2(8, mmi, finger_num);
+        DUMP_STRUCT_ITEM_2(8, mmi, storage_interval);
         DUMP_STRUCT_ITEM_2(8, mmi, sum_type);
+        DUMP_STRUCT_ITEM_2(8, mmi, deadpx_radius);
+        DUMP_STRUCT_ITEM_2(8, mmi, auth_reverse_grey);
+        // mmi.touch_info
+        DUMP_SUB_STRUCT_BEGIN(8, touch_info);
+        DUMP_STRUCT_ITEM_3(12, mmi, touch_info, center_x);
+        DUMP_STRUCT_ITEM_3(12, mmi, touch_info, center_y);
+        DUMP_STRUCT_ITEM_3(12, mmi, touch_info, b1_distance_threshold);
+        DUMP_STRUCT_ITEM_3(12, mmi, touch_info, b2_distance_threshold);
+        DUMP_STRUCT_ITEM_3(12, mmi, touch_info, b2_b1_distance_threshold);
+        DUMP_STRUCT_ITEM_3(12, mmi, touch_info, c1_coverage_threshold);
+        DUMP_STRUCT_ITEM_3(12, mmi, touch_info, c2_coverage_threshold);
+        DUMP_SUB_STRUCT_END(8);
+        DUMP_SUB_STRUCT_END(4);
+
+        // aec
+        DUMP_SUB_STRUCT_BEGIN(4, aec);
+        DUMP_STRUCT_ITEM_HEX_2(8, aec, left);
+        DUMP_STRUCT_ITEM_HEX_2(8, aec, right);
+        DUMP_STRUCT_ITEM_2(8, aec, max_loop);
+        DUMP_STRUCT_ITEM_2(8, aec, mean_min);
+        DUMP_STRUCT_ITEM_2(8, aec, mean_max);
+        DUMP_STRUCT_ITEM_2(8, aec, time);
+        DUMP_STRUCT_ITEM_2(8, aec, pclk);
         DUMP_SUB_STRUCT_END(4);
 
         // ft

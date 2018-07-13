@@ -64,6 +64,10 @@ uint64_t m_auth_id;
 int32_t m_need_send_cancel_notice;
 
 int32_t m_enroll_pause = 0;
+#ifdef SL_FP_FEATURE_OPPO_CUSTOMIZE_OPTIC
+volatile static int32_t m_finger_ready = 0;
+#endif
+
 uint32_t m_pre_enroll_time = 0; // seconds
 
 #define ENROLL_TIME_OUT_MAX 600 // 10 minutes
@@ -84,6 +88,12 @@ static int _finger_auth_command();
 static int _finger_lock_mode_commond();
 
 int32_t silfp_ext_cb_command();
+
+#ifdef SL_FP_FEATURE_OPPO_CUSTOMIZE_OPTIC
+int silfp_clear_finger_ready_flag();
+inline int silfp_is_finger_ready();
+int silfp_wait_for_finger_ready();
+#endif
 
 #ifdef SL_FP_FEATURE_OPPO_CUSTOMIZE
 void silfp_send_enumerated_notice();
@@ -566,6 +576,9 @@ void silfp_finger_set_work_state(worker_state_t state)
     pthread_mutex_lock(&m_lock);
 
     m_work_cancel = 1;
+#ifdef SL_FP_FEATURE_OPPO_CUSTOMIZE_OPTIC
+    silfp_clear_finger_ready_flag();
+#endif
     sl_fp_cancel();
 
     if ((_finger_get_work_state_unlock() != STATE_EXIT ) && (_finger_get_work_state_unlock() != STATE_BREAK)) {
@@ -596,6 +609,9 @@ static void _finger_screen_state_callback(int32_t screenon, void __unused *param
             LOG_MSG_VERBOSE("should goto idle, cancel navi************");
             _finger_set_work_state_unlock(STATE_IDLE);
             m_work_cancel = 1;
+#ifdef SL_FP_FEATURE_OPPO_CUSTOMIZE_OPTIC
+            silfp_clear_finger_ready_flag();
+#endif
             sl_fp_cancel();
         }
     }
@@ -618,6 +634,9 @@ int silfp_finger_init()
     m_tid_workerthread = 0;
     m_worker_state = STATE_IDLE;
     m_work_cancel = 0;
+#ifdef SL_FP_FEATURE_OPPO_CUSTOMIZE_OPTIC
+    silfp_clear_finger_ready_flag();
+#endif
 
     pthread_mutex_init(&m_lock, NULL);
     pthread_cond_init(&m_worker_cond, NULL);
@@ -712,6 +731,9 @@ static int _silfp_finger_capture_image(int32_t __unused type, int32_t __unused t
     if (!times) {
         sileadHypnusSetAction();
     }
+/**tp info struct for underglass fingerprint,add by pruce_tang_20180710 start **/
+	sl_init_tp_touch_info();
+    silfp_get_tp_touch_info(0);
 
     ret = sl_fp_ci_chk_finger();
     if (ret >= 0) {
@@ -723,7 +745,8 @@ static int _silfp_finger_capture_image(int32_t __unused type, int32_t __unused t
 #ifdef SIL_DUMP_IMAGE
     sl_fp_dump_data(type ? DUMP_IMG_AUTH_ORIG : DUMP_IMG_ENROLL_ORIG);
 #endif
-
+/**tp info struct for underglass fingerprint,add by pruce_tang_20180710 start **/
+    silfp_get_tp_touch_info(1);
     if (ret >= 0) {
         ret = sl_fp_ci_shot();
     }
@@ -773,6 +796,15 @@ static int _finger_enroll_command()
                 continue;
             }
 
+#ifdef SL_FP_FEATURE_OPPO_CUSTOMIZE_OPTIC
+            if(ret >= 0) {
+                ret = silfp_wait_for_finger_ready();
+                if (m_enroll_pause) {
+                    continue;
+                }
+            }
+#endif
+
             if (ret >= 0) {
 #ifndef SIL_DUMP_IMAGE
                 ret = sl_fp_capture_image(0);
@@ -810,7 +842,11 @@ static int _finger_enroll_command()
                         break;
                     }
                     case -SL_ERROR_DETECT_NO_FINGER:
-                    case -SL_ERROR_MOVE_TOO_FAST:
+                    case -SL_ERROR_MOVE_TOO_FAST:{
+                        _finger_send_acquired_notice(FINGERPRINT_ACQUIRED_GOOD);
+                        _finger_send_acquired_notice(FINGERPRINT_ACQUIRED_TOO_FAST);
+                        break;
+                    }						
                     case -SL_ERROR_FAKE_FINGER:
                     case -SL_ERROR_GAIN_IMPROVE_TIMEOUT:
                     case -SL_ERROR_SPI_TIMEOUT:
@@ -866,6 +902,10 @@ static int _finger_enroll_command()
     }
     LOG_MSG_DEBUG("enroll finish-------------");
 
+    if (sl_fp_calibrate_step(4) > 0) {
+        sl_fp_calibrate_step(5);
+    }
+
     if (status >= 0) {
         sl_fp_get_finger_up();
     }
@@ -879,7 +919,7 @@ static int _finger_auth_command()
     int fid = -1;
     int status = -1;
     int i = 0;
-    const int retry_max = 2;
+    const int retry_max = 3;
 
     LOG_MSG_DEBUG("authenticate-------------");
 
@@ -887,6 +927,11 @@ static int _finger_auth_command()
     if (ret >= 0) {
         do {
             ret = sl_fp_wait_finger_down();
+#ifdef SL_FP_FEATURE_OPPO_CUSTOMIZE_OPTIC
+            if(ret >= 0) {
+                ret = silfp_wait_for_finger_ready();
+            }
+#endif
             if (ret >= 0) {
                 for (i = 0; i < retry_max; i++) {
                     silfp_stats_start();
@@ -897,15 +942,13 @@ static int _finger_auth_command()
 #endif
                     if (ret >= 0) {
                         silfp_stats_capture_image();
-                        ret = sl_fp_auth_step(m_auth_op_id, (uint32_t *)&fid);
+                        ret = sl_fp_auth_step(m_auth_op_id, i, (uint32_t *)&fid);
 #ifdef SIL_DUMP_IMAGE
                         sl_fp_dump_data((ret >=0) ? DUMP_IMG_AUTH_SUCC : DUMP_IMG_AUTH_FAIL);
 #endif /* SIL_DUMP_IMAGE */
                     }
 
                     if (ret >= 0) { // matched
-                        break;
-                    } else if ((ret != -SL_ERROR_AUTH_MISMATCH) && (ret != -SL_ERROR_FAKE_FINGER)) { // system error
                         break;
                     }
                 }
@@ -986,6 +1029,10 @@ static int _finger_auth_command()
 
     LOG_MSG_DEBUG("authenticate finish-------------");
     sl_fp_auth_end();
+
+    if (sl_fp_calibrate_step(4) > 0) {
+        sl_fp_calibrate_step(5);
+    }
 
     if (status >= 0) {
         sl_fp_wait_finger_up();
@@ -1208,6 +1255,17 @@ int silfp_get_engineering_info(uint32_t type)
 #endif
 
 #ifdef SL_FP_FEATURE_OPPO_CUSTOMIZE_OPTIC
+/**tp info struct for underglass fingerprint,add by pruce_tang_20180710 start **/
+
+int silfp_get_tp_touch_info(uint8_t mode)
+{
+    int ret = -1;
+    
+    ret = sl_get_tp_touch_info(mode);
+
+    return ret;
+}
+
 int silfp_touch_down()
 {
     LOG_MSG_DEBUG("touch down");
@@ -1220,6 +1278,40 @@ int silfp_touch_up()
     LOG_MSG_DEBUG("touch up");
     sl_fp_sync_finger_status_optic(0);
     return 0;
+}
+
+int silfp_notify_finger_ready()
+{
+    LOG_MSG_DEBUG("notify finger ready");
+    m_finger_ready = 1;
+    return SL_SUCCESS;
+}
+
+int silfp_clear_finger_ready_flag()
+{
+    LOG_MSG_DEBUG("clear finger ready flag");
+    m_finger_ready = 0;
+    return SL_SUCCESS;
+}
+
+inline int silfp_is_finger_ready()
+{
+    return m_finger_ready;
+}
+
+int silfp_wait_for_finger_ready()
+{
+    int iRetry = 200;
+    while((iRetry > 0) && (!silfp_finger_is_canceled ())) {
+        if(silfp_is_finger_ready()) {
+            silfp_clear_finger_ready_flag();
+            return SL_SUCCESS;
+        }
+        iRetry--;
+        usleep(100 * 25); // 2.5ms
+    }
+    silfp_clear_finger_ready_flag();
+    return -SL_ERROR_CANCELED;
 }
 
 void _send_fingerprint_cmd_notice(int32_t cmd_id, int8_t *result, uint32_t len)

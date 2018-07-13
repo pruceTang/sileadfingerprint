@@ -44,7 +44,7 @@ typedef struct silead_fp_handle {
     int32_t (*fp_nav_capture_image)(void);
 
     int32_t (*fp_auth_start)(void);
-    int32_t (*fp_auth_step)(uint64_t op_id, uint32_t *fid);
+    int32_t (*fp_auth_step)(uint64_t op_id, uint32_t step, uint32_t *fid);
     int32_t (*fp_auth_end)(void);
 
     int32_t (*fp_enroll_start)(void);

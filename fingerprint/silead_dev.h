@@ -84,6 +84,16 @@ typedef struct fp_dev_conf_t {
 #define SIFP_IOC_WAKELOCK      _IOW(SIFP_IOC_MAGIC, 27, uint8_t)
 #define SIFP_IOC_PWDN          _IOW(SIFP_IOC_MAGIC, 28, uint8_t)
 #define SIFP_IOC_PROC_NODE     _IOW(SIFP_IOC_MAGIC, 29, char[PROC_VND_ID_LEN])
+/**tp info struct for underglass fingerprint,add by pruce_tang_20180710 start **/
+typedef struct fingerprint_tp_info {
+    uint16_t touch_state;//  up:0 ---------------------- down :1
+    uint16_t image_state;// before capture img : 0 -------- after capture img 1
+    int32_t touch_positon_x;
+    int32_t touch_positon_y;
+    uint32_t touch_coverage;	
+} fingerprint_tp_info_t;
+#define SIFP_IOC_GET_TP_TOUCH_INFO          _IOR(SIFP_IOC_MAGIC, 30, struct fp_dev_conf_t)
+int32_t silfp_dev_get_tp_touch_info(int32_t fd, fingerprint_tp_info_t *tp_touch_info);
 
 int32_t silfp_dev_get_ver(int32_t fd, char *ver, uint32_t len);
 int32_t silfp_dev_enable(int32_t fd);

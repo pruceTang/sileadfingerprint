@@ -285,3 +285,15 @@ int32_t silfp_dev_create_proc_node(int32_t fd, char *chipname)
 
     return ret;
 }
+/**tp info struct for underglass fingerprint,add by pruce_tang_20180710 start **/
+int32_t silfp_dev_get_tp_touch_info(int32_t fd, fingerprint_tp_info_t *tp_touch_info)
+{
+    int32_t ret = ioctl(fd, SIFP_IOC_GET_TP_TOUCH_INFO, tp_touch_info);
+    if (ret < 0) {
+        ret = -SL_ERROR_DEV_IOCTL_FAILED;
+    }
+
+    return ret;
+}
+
+

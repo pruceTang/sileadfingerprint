@@ -98,6 +98,10 @@ static const char dump_prefix[][16] = {
 #define FP_OPTIC_CAL_FILE2 (FP_CONFIG_PATH FP_OPTIC_CAL_NAME2)
 #define FP_OPTIC_CAL_NAME3 "fpcal3.dat"
 #define FP_OPTIC_CAL_FILE3 (FP_CONFIG_PATH FP_OPTIC_CAL_NAME3)
+#define FP_OPTIC_CAL_NAME4 "fpcal4.dat"
+#define FP_OPTIC_CAL_FILE4 (FP_CONFIG_PATH FP_OPTIC_CAL_NAME4)
+#define FP_OPTIC_CAL_NAME5 "fpcal5.dat"
+#define FP_OPTIC_CAL_FILE5 (FP_CONFIG_PATH FP_OPTIC_CAL_NAME5)
 #define FP_OPTIC_DEADPX_NAME "fpdeadpx.dat"
 #define FP_OPTIC_DEADPX_FILE (FP_CONFIG_PATH FP_OPTIC_DEADPX_NAME)
 
@@ -128,6 +132,10 @@ static uint32_t m_shutdown_by_avdd = 0;
 
 static int32_t _sl_fp_save_config(void);
 static int32_t _sl_fp_calibrate_step(uint32_t step, uint32_t init);
+
+/**tp info struct for underglass fingerprint,add by pruce_tang_20180710 start **/
+fingerprint_tp_info_t m_pre_tp_touch_info;
+fingerprint_tp_info_t m_later_tp_touch_info;
 
 void sileadHypnusSetAction()
 {
@@ -291,10 +299,11 @@ static inline int32_t _fp_wait_finger_status(int32_t fd, int32_t status, int32_t
     LOG_MSG_VERBOSE("wait finger status %d", status);
 
     do {
-        sl_fp_download_normal();
+        //sl_fp_download_normal();
         if (m_need_irq_pwdn) {
             sl_fp_chip_pwdn();
         } else {
+        sl_fp_download_normal();
             if (m_fp_impl_handler != NULL) {
                 if (m_fp_impl_handler->fp_wait_finger_status != NULL) {
                     silfp_dev_enable(m_dev_fd);
@@ -460,12 +469,12 @@ int32_t sl_fp_auth_start(void)
     return ret;
 }
 
-int32_t sl_fp_auth_step(uint64_t op_id, uint32_t *fid)
+int32_t sl_fp_auth_step(uint64_t op_id, uint32_t step, uint32_t *fid)
 {
     int32_t ret = -SL_ERROR_TA_OPEN_FAILED;
     if (m_fp_impl_handler != NULL) {
         if (m_fp_impl_handler->fp_auth_step != NULL) {
-            ret = m_fp_impl_handler->fp_auth_step(op_id, fid);
+            ret = m_fp_impl_handler->fp_auth_step(op_id, step, fid);
         } else {
             LOG_MSG_DEBUG("No implement fp_auth_step");
         }
@@ -857,6 +866,8 @@ int32_t sl_fp_calibrate(void)
     ret = _sl_fp_calibrate_step(1, 1);
     ret |= _sl_fp_calibrate_step(2, 1);
     ret |= _sl_fp_calibrate_step(3, 1);
+    ret |= _sl_fp_calibrate_step(4, 1);
+    ret |= _sl_fp_calibrate_step(5, 1);
 #endif /* SL_FP_FEATURE_OPPO_CUSTOMIZE_OPTIC */
 
     return ret;
@@ -1563,7 +1574,41 @@ int32_t sl_fp_alg_set_param(uint32_t idx, void *buffer, uint32_t *plen, uint32_t
     return ret;
 }
 
-#define BUF_SIZE   50*1024
+#define BUF_SIZE   130*1024
+static char *_sl_fp_get_cal_file(uint32_t step)
+{
+    switch(step&0xF) {
+    case 1:
+        return FP_OPTIC_CAL_FILE1;
+    case 2:
+        return FP_OPTIC_CAL_FILE2;
+    case 3:
+        return FP_OPTIC_CAL_FILE3;
+    case 4:
+        return FP_OPTIC_CAL_FILE4;
+    case 5:
+        return FP_OPTIC_CAL_FILE5;
+    default:
+        return NULL;
+    }
+}
+static char *_sl_fp_get_cal_name(uint32_t step)
+{
+    switch(step&0xF) {
+    case 1:
+        return FP_OPTIC_CAL_NAME1;
+    case 2:
+        return FP_OPTIC_CAL_NAME2;
+    case 3:
+        return FP_OPTIC_CAL_NAME3;
+    case 4:
+        return FP_OPTIC_CAL_NAME4;
+    case 5:
+        return FP_OPTIC_CAL_NAME5;
+    default:
+        return NULL;
+    }
+}
 static int32_t _sl_fp_calibrate_step(uint32_t step, uint32_t init)
 {
     int32_t  ret = -SL_ERROR_TA_OPEN_FAILED;
@@ -1571,10 +1616,10 @@ static int32_t _sl_fp_calibrate_step(uint32_t step, uint32_t init)
     char     *buf = NULL;
     int32_t  len = BUF_SIZE;
 
-    if (1 == step || 2 == step || 3 == step) {
+    if ((step >= 1) && (step <= 5)) {
         if (init) {
-            len = silfp_storage_get_file_size((1 == step)?FP_OPTIC_CAL_FILE1:((2 == step)?FP_OPTIC_CAL_FILE2:FP_OPTIC_CAL_FILE3));
-            LOG_MSG_DEBUG("get %s size %d",(1 == step)?FP_OPTIC_CAL_FILE1:((2 == step)?FP_OPTIC_CAL_FILE2:FP_OPTIC_CAL_FILE3), len);
+            len = silfp_storage_get_file_size(_sl_fp_get_cal_file(step));
+            LOG_MSG_DEBUG("get %s size %d",_sl_fp_get_cal_file(step), len);
 
             if ( len < 10 ) {
                 len = BUF_SIZE;
@@ -1591,7 +1636,7 @@ static int32_t _sl_fp_calibrate_step(uint32_t step, uint32_t init)
         memset(buf,0,len);
 
         if ( init && (len != BUF_SIZE) ) {
-            ret = silfp_storage_load_config(FP_CONFIG_PATH, (1 == step)?FP_OPTIC_CAL_NAME1:((2 == step)?FP_OPTIC_CAL_NAME2:FP_OPTIC_CAL_NAME3), buf, len-64);
+            ret = silfp_storage_load_config(FP_CONFIG_PATH, _sl_fp_get_cal_name(step), buf, len-64);
             if ( ret == len-64 ) {
                 step_ta |= 0x10; // Indicate date is valid.
             } else {
@@ -1608,8 +1653,8 @@ static int32_t _sl_fp_calibrate_step(uint32_t step, uint32_t init)
             silfp_dev_enable(m_dev_fd);
             ret = m_fp_impl_handler->fp_calibrate_optic(step_ta, (uint8_t *)buf, (uint32_t *)&len);
             silfp_dev_disable(m_dev_fd);
-            if ((((ret >= 0) && !(step_ta&0xF0)) || ((ret > 10) && (step_ta&0xF0))) && (1 == step || 2 == step || 3 == step)) {
-                silfp_storage_save_config(FP_CONFIG_PATH, (1 == step)?FP_OPTIC_CAL_NAME1:((2 == step)?FP_OPTIC_CAL_NAME2:FP_OPTIC_CAL_NAME3), buf, len);
+            if ((((ret >= 0) && !(step_ta&0xF0)) || ((ret > 10) && (step_ta&0xF0))) && ((step >= 1 && step <= 5))) {
+                silfp_storage_save_config(FP_CONFIG_PATH, _sl_fp_get_cal_name(step), buf, len);
             }
         } else {
             LOG_MSG_DEBUG("No implement fp_calibrate_optic");
@@ -1622,7 +1667,7 @@ static int32_t _sl_fp_calibrate_step(uint32_t step, uint32_t init)
     }
 
 #ifdef SIL_DUMP_IMAGE
-    if ((ret >= 0) && !(step_ta&0xF0)) {
+    if ((ret >= 0) && !(step_ta&0xF0) && ((step >= 1) && (step <= 3))) {
         sl_fp_dump_data(DUMP_IMG_RAW);
     }
 #endif /* SIL_DUMP_IMAGE */
@@ -1714,7 +1759,7 @@ int32_t sl_fp_optic_test_snr(uint32_t *snr, uint32_t *noise, uint32_t *signal)
 
     if (snr) {
         *snr = snr_result[0];
-     }
+    }
     if (noise) {
         *noise = snr_result[1];
     }
@@ -1817,6 +1862,9 @@ int32_t sl_fp_test_image_capture(uint32_t gentpl, void *buffer, uint32_t *len, u
     if (m_fp_impl_handler != NULL) {
         if (m_fp_impl_handler->fp_test_image_capture != NULL) {
             ret = m_fp_impl_handler->fp_test_image_capture(gentpl, buffer, len, quality, area, istpl);
+            if (sl_fp_calibrate_step(4) > 0) {
+                sl_fp_calibrate_step(5);
+            }
         } else {
             LOG_MSG_DEBUG("No implement fp_test_image_capture");
         }
@@ -1913,6 +1961,14 @@ int32_t sl_fp_chip_pwdn(void)
 
     if (m_dev_fd > 0) {
         ret = silfp_dev_pwdn(m_dev_fd, (m_shutdown_by_avdd ? SIFP_PWDN_POWEROFF : SIFP_PWDN_NONE));
+        if (m_shutdown_by_avdd && (m_fp_impl_handler->fp_alg_set_param != NULL)) {
+            uint8_t onoff = 0;
+            uint32_t len = sizeof(onoff);
+            uint32_t result = 0;
+            silfp_dev_enable(m_dev_fd);
+            ret = m_fp_impl_handler->fp_alg_set_param(0, &onoff, &len, &result);
+            silfp_dev_disable(m_dev_fd);
+        }
     }
 
     return ret;
@@ -1988,38 +2044,99 @@ int32_t sl_fp_get_finger_down_loop(void)
 
     return ret;
 }
-
-
-int32_t sl_cb_optic_test_factory_quality()
-{
-    int32_t ret = 0;
-    int32_t snr_ret = 0;
-    uint32_t snr = 0;
-    uint32_t noise = 0;
-    uint32_t signal = 0;
-    uint32_t qa_result = 0;
-    uint32_t quality  = 0;
-    uint32_t length = 0;
-
-    sl_fp_set_hbm_mode(1);
-    sl_fp_download_normal();
-
-    ret = sl_fp_optic_test_factory_quality(&qa_result, &quality, &length);
-    if (qa_result == 0 && ret >= 0) {
-        ret = 0;
-    } else {
-        ret = 1;
-        LOG_MSG_ERROR("ret: %d, result: %u, quality:%u, length:%u", ret, qa_result, quality, length);
-    }
-
-    snr_ret = sl_fp_optic_test_snr(&snr, &noise, &signal);
-    if (ret == 0 && snr_ret < 0) { // quality test pass, snr fail, return fail
-        ret = 1;
-    }
-    sl_fp_set_hbm_mode(0);
-
-    //silfp_send_fingerprint_cmd_3v_notice(FUN_FINGERPRINT_TEST1, ret, snr, noise, signal);
-    return 0;
-}
 /******add by pruce_tang_20180616 for interface match  --end*****/
 
+/**tp info struct for underglass fingerprint,add by pruce_tang_20180710 start **/
+
+#define TP_TOUCH_INFO_FILE_PATH "/data/system/silead/"
+#define TP_TOUCH_INFO_FILE_NAME "tp_touch_info.txt"
+int sl_set_tp_touch_info(fingerprint_tp_info_t *tp_touch_info,int32_t *data)
+{
+    tp_touch_info->touch_state = *data;
+    tp_touch_info->touch_positon_x = *(data+1);
+    tp_touch_info->touch_positon_y = *(data+2);
+    tp_touch_info->touch_coverage = *(data+3);
+    tp_touch_info->image_state= *(data+4);	
+    return 0;
+}
+
+int sl_get_tp_touch_info_from_file(const char *file_path,const char *file_name)  
+{  
+    int32_t read_buff[10]={0};
+    int32_t i;
+    char open_path[64];
+    sprintf(open_path,"%s%s",file_path,file_name);	
+    FILE *fpRead=fopen(open_path,"r");  
+    if(fpRead==NULL)  
+    {  
+        LOG_MSG_ERROR("%s%s file not exist!",TP_TOUCH_INFO_FILE_PATH,TP_TOUCH_INFO_FILE_NAME);
+        return 0;  
+    }  
+    for( i=0;i<10;i++)  
+    {  
+        fscanf(fpRead,"%d ",&read_buff[i]);  
+    }  
+    fclose(fpWrite);
+    sl_set_tp_touch_info(&m_pre_tp_touch_info, &read_buff[0]);
+    LOG_MSG_DEBUG("pre_tp_info:touch_state=%d,pos_x=%d,pos_y=%d,coverage=%d,img_state=%d",
+		  read_buff[0],read_buff[1],read_buff[2],read_buff[3],read_buff[4]);
+    sl_set_tp_touch_info(&m_pre_tp_touch_info, &read_buff[5]);
+    LOG_MSG_DEBUG(("pre_tp_info:touch_state=%d,pos_x=%d,pos_y=%d,coverage=%d,img_state=%d",
+		  read_buff[5],read_buff[6],read_buff[7],read_buff[8],read_buff[9]);
+    return 1;  
+} 
+
+int32_t sl_get_tp_touch_info(uint8_t mode)
+{
+    int32_t ret = -1;
+    fingerprint_tp_info_t *tp_touch_info =NULL;
+    if(0==mode){
+        ret = silfp_dev_get_tp_touch_info(m_dev_fd, &m_pre_tp_touch_info);
+	 	m_pre_tp_touch_info.image_state = mode;
+        tp_touch_info = &m_pre_tp_touch_info;
+    }else if(1==mode){
+        ret = silfp_dev_get_tp_touch_info(m_dev_fd, &m_later_tp_touch_info);
+	 	m_later_tp_touch_info.image_state = mode;
+        tp_touch_info = &m_later_tp_touch_info;		
+    }
+    		
+    if(ret<0){
+            LOG_MSG_ERROR("get tp touch info failed!");
+            return ret;        
+    }
+
+    if (m_fp_impl_handler->fp_alg_set_param != NULL && NULL != tp_touch_info) {
+        uint32_t len = sizeof(fingerprint_tp_info_t);
+        uint32_t result = 0;		
+        silfp_dev_enable(m_dev_fd);
+        ret = m_fp_impl_handler->fp_alg_set_param(1, tp_touch_info, &len, &result);
+        silfp_dev_disable(m_dev_fd);
+    }
+
+    return ret;
+}
+
+int sl_get_pre_tp_touch_info(uint32_t state,uint32_t pos_x,uint32_t pos_y,uint32_t coverage)
+{
+    m_pre_tp_touch_info.touch_state = state;
+    m_pre_tp_touch_info.touch_positon_x = pos_x;
+    m_pre_tp_touch_info.touch_positon_y = pos_y;
+    m_pre_tp_touch_info.touch_coverage = coverage;
+    return 0;
+}
+int sl_set_later_tp_touch_info(uint32_t state,uint32_t pos_x,uint32_t pos_y,uint32_t coverage)
+{
+    m_later_tp_touch_info.touch_state = state;
+    m_later_tp_touch_info.touch_positon_x = pos_x;
+    m_later_tp_touch_info.touch_positon_y = pos_y;
+    m_later_tp_touch_info.touch_coverage = coverage;
+    return 0;
+}
+
+int sl_init_tp_touch_info()
+{
+    memset(&m_later_tp_touch_info, 0, sizeof(m_later_tp_touch_info));
+    memset(&m_pre_tp_touch_info, 0, sizeof(m_pre_tp_touch_info));
+    return 0;
+}
+/**tp info struct for underglass fingerprint,add by pruce_tang_20180710 end **/

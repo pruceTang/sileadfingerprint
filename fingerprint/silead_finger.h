@@ -60,9 +60,11 @@ int silfp_get_engineering_info(uint32_t type);
 #ifdef SL_FP_FEATURE_OPPO_CUSTOMIZE_OPTIC
 int silfp_touch_down();
 int silfp_touch_up();
+int silfp_notify_finger_ready();
 int silfp_send_fingerprint_cmd(int32_t cmd_id, int8_t* in_buf, uint32_t size);
 #endif
-
+/**tp info struct for underglass fingerprint,add by pruce_tang_20180710 start **/
+int silfp_get_tp_touch_info(uint8_t mode);
 
 
 #ifdef __cplusplus

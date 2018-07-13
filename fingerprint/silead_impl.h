@@ -54,7 +54,7 @@ int32_t sl_fp_capture_image(int32_t times);
 int32_t sl_fp_nav_capture_image(void);
 
 int32_t sl_fp_auth_start(void);
-int32_t sl_fp_auth_step(uint64_t op_id, uint32_t *fid);
+int32_t sl_fp_auth_step(uint64_t op_id, uint32_t step, uint32_t *fid);
 int32_t sl_fp_auth_end(void);
 
 int32_t sl_fp_enroll_start(void);
@@ -114,8 +114,13 @@ int32_t sl_fp_create_proc_node(void *chipname);
 
 int32_t sl_fp_set_hbm_mode(uint32_t mode);
 int32_t sl_fp_set_brightness(uint32_t mode);
+int32_t sl_fp_get_finger_down_loop(void);
 int32_t sl_cb_optic_test_factory_quality();
 void sileadHypnusSetAction();
+
+/**tp info struct for underglass fingerprint,add by pruce_tang_20180710 start **/
+int32_t sl_get_tp_touch_info(uint8_t mode);
+int32_t sl_init_tp_touch_info();
 
 #ifdef SIL_DUMP_IMAGE
 typedef enum {
