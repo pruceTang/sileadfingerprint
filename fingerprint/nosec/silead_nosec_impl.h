@@ -24,7 +24,7 @@
 
 #include "silead_ca_impl.h"
 
-int32_t silfp_ca_nosec_register(ca_impl_handle_t* handle);
+int32_t silfp_ca_nosec_register(ca_impl_handle_t* handle, const void *ta_name);
 
 #endif /* __SILEAD_NOSEC_IMPL_H__ */
 

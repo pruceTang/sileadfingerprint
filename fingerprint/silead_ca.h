@@ -24,7 +24,7 @@
 
 int32_t silfp_ca_send_modified_command(uint32_t cmd, void *buffer, uint32_t len, uint32_t isget, uint32_t v1, uint32_t v2, uint32_t *data1, uint32_t *data2);
 int32_t silfp_ca_send_normal_command(uint32_t cmd, uint32_t v1, uint32_t v2, uint32_t v3, uint32_t v4, uint32_t *data1, uint32_t *data2, uint32_t *data3);
-int32_t silfp_ca_open(void);
+int32_t silfp_ca_open(const void *ta_name);
 int32_t silfp_ca_close(void);
 int32_t silfp_ca_keymaster_get(void **buffer);
 

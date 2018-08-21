@@ -35,6 +35,10 @@
 #define CHECK_IMAGE_MAGIC_SUPPORT 0
 #endif
 
+#ifndef FP_BMP_PATH
+#define FP_BMP_PATH "/data/system/silead"
+#endif /* !FP_BMP_PATH */
+
 #define BMP_MAGIC1 0x0511
 #define BMP_MAGIC2 0x1EAD
 
@@ -252,7 +256,7 @@ static int32_t _bmp_get_save_file_path(char *path, const char *prefix, const uin
 
     if (path != NULL && len > 0) {
         if (prefix) {
-            snprintf(path, len, "/data/system/silead/%04d-%s-%04d%02d%02d-%02d%02d%02d.bmp",
+            snprintf(path, len, "%s/%04d-%s-%04d%02d%02d-%02d%02d%02d.bmp", FP_BMP_PATH,
                      index++, prefix, (1900 + p->tm_year), ( 1 + p->tm_mon), p->tm_mday,
                      p->tm_hour, p->tm_min, p->tm_sec);
         } else {

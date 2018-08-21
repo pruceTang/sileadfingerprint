@@ -229,7 +229,7 @@ static int32_t _ext_do_test_get_image(void)
             continue;
         }
 
-        sileadHypnusSetAction();
+        sl_fp_capture_pre();
 
         ret = sl_fp_ci_chk_finger();
         if (ret < 0) {
@@ -237,7 +237,7 @@ static int32_t _ext_do_test_get_image(void)
         }
 
         do {
-            ret = sl_fp_ci_adj_gain();
+            ret = sl_fp_ci_adj_gain(0);
         } while(ret > 0);
         if (ret < 0) {
             continue;
@@ -251,7 +251,7 @@ static int32_t _ext_do_test_get_image(void)
         }
 
         if (ret >= 0) {
-            ret = sl_fp_ci_shot();
+            ret = sl_fp_ci_shot(0);
             if (ret >= 0) {
                 ret = silfp_test_image_capture(feature, (char *)m_test_cmd_img_reponse.rsp, m_test_cmd_img_reponse.rsp_len);
                 if (ret >= 0) {

@@ -83,7 +83,7 @@ int32_t silfp_ca_send_normal_command(uint32_t cmd, uint32_t v1, uint32_t v2, uin
     return ret;
 }
 
-int32_t silfp_ca_open(void)
+int32_t silfp_ca_open(const void *ta_name)
 {
     int32_t ret = -SL_ERROR_TA_OPEN_FAILED;
 
@@ -91,22 +91,22 @@ int32_t silfp_ca_open(void)
 
 #ifdef SECURITY_TYPE_QSEE
     if (ret < 0) {
-        ret = silfp_ca_qsee_register(&m_ca_handler);
+        ret = silfp_ca_qsee_register(&m_ca_handler, ta_name);
     }
 #endif
 #ifdef SECURITY_TYPE_GP
     if (ret < 0) {
-        ret = silfp_ca_gp_register(&m_ca_handler);
+        ret = silfp_ca_gp_register(&m_ca_handler, ta_name);
     }
 #endif
 #ifdef SECURITY_TYPE_TEE
     if (ret < 0) {
-        ret = silfp_ca_tee_register(&m_ca_handler);
+        ret = silfp_ca_tee_register(&m_ca_handler, ta_name);
     }
 #endif
 #ifdef SECURITY_TYPE_NOSEC
     if (ret < 0) {
-        ret = silfp_ca_nosec_register(&m_ca_handler);
+        ret = silfp_ca_nosec_register(&m_ca_handler, ta_name);
     }
 #endif
 

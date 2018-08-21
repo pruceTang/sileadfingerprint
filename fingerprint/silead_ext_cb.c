@@ -229,11 +229,11 @@ int32_t _ext_cb_image_capture_loop()
     sl_fp_download_normal();
     sl_fp_ci_chk_finger();
     do {
-        sileadHypnusSetAction();
+        sl_fp_capture_pre();
 
         sl_fp_set_hbm_mode(1);
         do {
-            ret = sl_fp_ci_adj_gain();
+            ret = sl_fp_ci_adj_gain(0);
         } while(ret > 0);
         sl_fp_set_hbm_mode(0);
 

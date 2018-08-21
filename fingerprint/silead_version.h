@@ -31,8 +31,8 @@
 #define SECURITY_TYPE_GP_VALUE "g"
 
 #define VERSION_FP_MAJOR      "4"
-#define VERSION_FP_MINOR      "15"
-#define VERSION_FP_REVISION   "6"
+#define VERSION_FP_MINOR      "20"
+#define VERSION_FP_REVISION   "8"
 
 #ifndef BUILD_DATE
 #define BUILD_DATE "XXXXXXXXXXXX"

@@ -32,6 +32,13 @@
  * Martin Wu  2018/6/30   0.2.4      Add distortion & finger_num param.
  * Martin Wu  2018/7/4    0.2.5      Add AEC param.
  * Martin Wu  2018/7/6    0.2.6      Add dead pixel radius.
+ * Martin Wu  2018/7/14   0.2.7      Add Auth/Enroll capture image param.
+ * Martin Wu  2018/7/20   0.2.8      Add postprocess normalize param.
+ * Martin Wu  2018/7/23   0.2.9      Add postprocess remove deadpx param.
+ * Martin Wu  2018/7/25   0.3.0      Add R9O03 spd param.
+ * Martin Wu  2018/7/30   0.3.1      Add enroll/auth quality param.
+ * Martin Wu  2018/8/4    0.3.2      Add post-enroll control param.
+ * Martin Wu  2018/8/11   0.3.3      Add icon detect param.
  *
  *****************************************************************************/
 
@@ -52,7 +59,6 @@
 
 #define CONFIG_SET_NAME "cfg"
 #define FP_DEV_VER_NAME "dev_ver"
-static const char *param_name[] = {"FineTune_param", "Navi_param", "Cover_param", "Base_param", "Reduce_param"};
 
 #define STR_TO_UPPER(s, l) \
     do { \
@@ -293,7 +299,7 @@ static void _cfg_dump_pb_param(FILE *fp, const int32_t idx, const cf_pb_param_t 
     const uint32_t count_per_line = 8;
 
     if (param != NULL) {
-        DUMP_STRUCT_ARRAY_BEGIN(const int32_t, param_name[idx], module);
+        DUMP_STRUCT_ARRAY_BEGIN(const int32_t, silfp_cfg_get_param_name(idx), module);
         for (i = 0; i < param->len; i++) {
             if (i % count_per_line == 0) {
                 snprintf(buffer, sizeof(buffer), "    ");
@@ -451,7 +457,7 @@ void silfp_cfg_dump_data(const cf_set_t *pcfgs, char *board_module, int32_t upda
         DUMP_SUB_STRUCT_BEGIN(4, pb);
         DUMP_SUB_STRUCT_BEGIN(8, param); // pb.param
         for (i = 0; i < CFG_PB_PARAM_MAX; i++) {
-            DUMP_STRUCT_PB_PARAM_ITEM(12, param_name[i], module);
+            DUMP_STRUCT_PB_PARAM_ITEM(12, silfp_cfg_get_param_name(i), module);
         }
         DUMP_SUB_STRUCT_END(8);
         DUMP_SUB_STRUCT_BEGIN(8, agc); // pb.agc
@@ -491,6 +497,10 @@ void silfp_cfg_dump_data(const cf_set_t *pcfgs, char *board_module, int32_t upda
         DUMP_STRUCT_ITEM_3(12, pb, threshold, noise_coe);
         DUMP_STRUCT_ITEM_3(12, pb, threshold, gray_prec);
         DUMP_STRUCT_ITEM_3(12, pb, threshold, water_detect_threshold);
+        DUMP_STRUCT_ITEM_3(12, pb, threshold, fail_threshold);
+        DUMP_STRUCT_ITEM_3(12, pb, threshold, spd_flag);
+        DUMP_STRUCT_ITEM_3(12, pb, threshold, samefinger_threshold);
+        DUMP_STRUCT_ITEM_3(12, pb, threshold, identify_epay_threshold);
         DUMP_SUB_STRUCT_END(8);
         DUMP_SUB_STRUCT_END(4);
 
@@ -539,7 +549,10 @@ void silfp_cfg_dump_data(const cf_set_t *pcfgs, char *board_module, int32_t upda
         DUMP_STRUCT_ITEM_2(8, mmi, storage_interval);
         DUMP_STRUCT_ITEM_2(8, mmi, sum_type);
         DUMP_STRUCT_ITEM_2(8, mmi, deadpx_radius);
-        DUMP_STRUCT_ITEM_2(8, mmi, auth_reverse_grey);
+        DUMP_STRUCT_ITEM_2(8, mmi, cut_radius);
+        DUMP_STRUCT_ITEM_2(8, mmi, normalize_blk);
+        DUMP_STRUCT_ITEM_2(8, mmi, normalize_ratio);
+        DUMP_STRUCT_ITEM_2(8, mmi, fft_ratio);
         // mmi.touch_info
         DUMP_SUB_STRUCT_BEGIN(8, touch_info);
         DUMP_STRUCT_ITEM_3(12, mmi, touch_info, center_x);
@@ -552,15 +565,21 @@ void silfp_cfg_dump_data(const cf_set_t *pcfgs, char *board_module, int32_t upda
         DUMP_SUB_STRUCT_END(8);
         DUMP_SUB_STRUCT_END(4);
 
-        // aec
-        DUMP_SUB_STRUCT_BEGIN(4, aec);
-        DUMP_STRUCT_ITEM_HEX_2(8, aec, left);
-        DUMP_STRUCT_ITEM_HEX_2(8, aec, right);
-        DUMP_STRUCT_ITEM_2(8, aec, max_loop);
-        DUMP_STRUCT_ITEM_2(8, aec, mean_min);
-        DUMP_STRUCT_ITEM_2(8, aec, mean_max);
-        DUMP_STRUCT_ITEM_2(8, aec, time);
-        DUMP_STRUCT_ITEM_2(8, aec, pclk);
+        // pp
+        DUMP_SUB_STRUCT_BEGIN(4, pp);
+        DUMP_STRUCT_ITEM_HEX_2(8, pp, aec_left);
+        DUMP_STRUCT_ITEM_HEX_2(8, pp, aec_right);
+        DUMP_STRUCT_ITEM_2(8, pp, aec_time);
+        DUMP_STRUCT_ITEM_2(8, pp, cal_max_loop);
+        DUMP_STRUCT_ITEM_2(8, pp, dead_a);
+        DUMP_STRUCT_ITEM_2(8, pp, dead_b);
+        DUMP_STRUCT_ITEM_HEX_2(8, pp, quality_cut);
+        DUMP_STRUCT_ITEM_2(8, pp, quality_thr);
+        DUMP_STRUCT_ITEM_2(8, pp, enroll_quality_chk_num);
+        DUMP_STRUCT_ITEM_2(8, pp, enroll_post_num);
+        DUMP_STRUCT_ITEM_HEX_2(8, pp, enroll_post_mask);
+        DUMP_STRUCT_ITEM_2(8, pp, icon_ratio_z);
+        DUMP_STRUCT_ITEM_2(8, pp, icon_ratio_m);
         DUMP_SUB_STRUCT_END(4);
 
         // ft
@@ -583,6 +602,14 @@ void silfp_cfg_dump_data(const cf_set_t *pcfgs, char *board_module, int32_t upda
         DUMP_STRUCT_ITEM_HEX_2(8, esd, int_reg);
         DUMP_STRUCT_ITEM_HEX_2(8, esd, int_val);
         DUMP_STRUCT_ITEM_HEX_2(8, esd, int_beacon);
+        DUMP_SUB_STRUCT_END(4);
+
+        // ci
+        DUMP_SUB_STRUCT_BEGIN(4, ci);
+        DUMP_STRUCT_ITEM_2(8, ci, auth_reverse_skip);
+        DUMP_STRUCT_ITEM_2(8, ci, auth_reverse_grey);
+        DUMP_STRUCT_ITEM_2(8, ci, enroll_loop);
+        DUMP_STRUCT_ITEM_2(8, ci, enroll_skip);
         DUMP_SUB_STRUCT_END(4);
 
         DUMP_SUB_STRUCT_BEGIN(4, cfg);

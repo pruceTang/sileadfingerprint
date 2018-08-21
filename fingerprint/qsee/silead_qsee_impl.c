@@ -33,7 +33,8 @@
 #include "silead_qsee_impl.h"
 
 #define FP_QSEE_TZAPP_PATH "/vendor/firmware/"
-#define FP_QSEE_TZAPP_PATH2 "/etc/firmware/"
+#define FP_QSEE_TZAPP_PATH2 "/firmware/image/"
+#define FP_QSEE_TZAPP_PATH3 "/etc/firmware/"
 #ifndef FP_QSEE_TZAPP_NAME
 #define FP_QSEE_TZAPP_NAME "sileadta"
 #endif
@@ -86,7 +87,7 @@ static int32_t _ca_send_modified_command(uint32_t cmd, void *buffer, uint32_t le
     ion_fd_info.data[0].fd = ihandle.ifd_data_fd;
     ion_fd_info.data[0].cmd_buf_offset = sizeof(uint32_t);
 
-    if (isget != 0 && isget != 2) {
+    if (isget != 0 && isget != 2 && isget != 4) {
         memset((void *)ihandle.ion_sbuffer, 0, len);
     } else {
         memcpy((void *)ihandle.ion_sbuffer, buffer, len);
@@ -115,7 +116,7 @@ static int32_t _ca_send_modified_command(uint32_t cmd, void *buffer, uint32_t le
             LOG_MSG_ERROR("Error on TZ");
             ret = -SL_ERROR_TA_OP_FAILED;
         } else {
-            if (isget == 3) {
+            if (isget == 3 || isget == 4) {
                 always_get = 1;
             }
             if (always_get || (isget != 0 && rcv_buf->status >= 0)) {
@@ -191,7 +192,7 @@ static int32_t _ca_send_normal_command(uint32_t cmd, uint32_t v1, uint32_t v2, u
     return ret;
 }
 
-static int32_t _ca_open(void)
+static int32_t _ca_open(const void *ta_name)
 {
     int32_t ret = 0;
     void *buffer = NULL;
@@ -206,21 +207,42 @@ static int32_t _ca_open(void)
     }
 
     memset(&m_tz_app_info, 0, sizeof(m_tz_app_info));
-    ret = m_tz_handle->QSEECom_load_trustlet(m_tz_handle, &m_fp_handle, FP_QSEE_TZAPP_PATH, FP_QSEE_TZAPP_NAME, 1024);
-    if (ret < 0) {
-        ret = m_tz_handle->QSEECom_load_trustlet(m_tz_handle, &m_fp_handle, FP_QSEE_TZAPP_PATH2, FP_QSEE_TZAPP_NAME, 1024);
+
+    if (ta_name && (strlen(ta_name) > 0)) {
+        ret = m_tz_handle->QSEECom_load_trustlet(m_tz_handle, &m_fp_handle, FP_QSEE_TZAPP_PATH, ta_name, 1024);
         if (ret < 0) {
-#ifdef FP_QSEE_TZAPP64_NAME
-            ret = m_tz_handle->QSEECom_load_trustlet(m_tz_handle, &m_fp_handle, FP_QSEE_TZAPP_PATH, FP_QSEE_TZAPP64_NAME, 1024);
+            ret = m_tz_handle->QSEECom_load_trustlet(m_tz_handle, &m_fp_handle, FP_QSEE_TZAPP_PATH2, ta_name, 1024);
             if (ret < 0) {
-                ret = m_tz_handle->QSEECom_load_trustlet(m_tz_handle, &m_fp_handle, FP_QSEE_TZAPP_PATH2, FP_QSEE_TZAPP64_NAME, 1024);
+                ret = m_tz_handle->QSEECom_load_trustlet(m_tz_handle, &m_fp_handle, FP_QSEE_TZAPP_PATH3, ta_name, 1024);
+            }
+        }
+    } else {
+        ret = -1;
+    }
+
+    if (ret < 0) {
+        ret = m_tz_handle->QSEECom_load_trustlet(m_tz_handle, &m_fp_handle, FP_QSEE_TZAPP_PATH, FP_QSEE_TZAPP_NAME, 1024);
+        if (ret < 0) {
+            ret = m_tz_handle->QSEECom_load_trustlet(m_tz_handle, &m_fp_handle, FP_QSEE_TZAPP_PATH2, FP_QSEE_TZAPP_NAME, 1024);
+            if (ret < 0) {
+                ret = m_tz_handle->QSEECom_load_trustlet(m_tz_handle, &m_fp_handle, FP_QSEE_TZAPP_PATH3, FP_QSEE_TZAPP_NAME, 1024);
                 if (ret < 0) {
+#ifdef FP_QSEE_TZAPP64_NAME
+                    ret = m_tz_handle->QSEECom_load_trustlet(m_tz_handle, &m_fp_handle, FP_QSEE_TZAPP_PATH, FP_QSEE_TZAPP64_NAME, 1024);
+                    if (ret < 0) {
+                        ret = m_tz_handle->QSEECom_load_trustlet(m_tz_handle, &m_fp_handle, FP_QSEE_TZAPP_PATH2, FP_QSEE_TZAPP64_NAME, 1024);
+                        if (ret < 0) {
+                            ret = m_tz_handle->QSEECom_load_trustlet(m_tz_handle, &m_fp_handle, FP_QSEE_TZAPP_PATH3, FP_QSEE_TZAPP64_NAME, 1024);
+                            if (ret < 0) {
+                                return -SL_ERROR_TA_OPEN_FAILED;
+                            }
+                        }
+                    }
+#else
                     return -SL_ERROR_TA_OPEN_FAILED;
+#endif /* FP_QSEE_TZAPP64_NAME */
                 }
             }
-#else
-            return -SL_ERROR_TA_OPEN_FAILED;
-#endif /* FP_QSEE_TZAPP64_NAME */
         }
     }
 
@@ -276,7 +298,7 @@ static int32_t _ca_keymaster_get(void **buffer)
     return ret;
 }
 
-int32_t silfp_ca_qsee_register(ca_impl_handle_t* handle)
+int32_t silfp_ca_qsee_register(ca_impl_handle_t* handle, const void *ta_name)
 {
     int32_t ret;
 
@@ -285,7 +307,7 @@ int32_t silfp_ca_qsee_register(ca_impl_handle_t* handle)
         return -SL_ERROR_BAD_PARAMS;
     }
 
-    ret = _ca_open();
+    ret = _ca_open(ta_name);
     if (ret < 0) {
         _ca_close();
     }

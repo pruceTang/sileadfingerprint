@@ -31,6 +31,14 @@
  * Martin Wu  2018/6/30   0.2.3      Add distortion & finger_num param.
  * Martin Wu  2018/7/4    0.2.4      Add AEC param.
  * Martin Wu  2018/7/6    0.2.5      Add dead pixel radius.
+ * Martin Wu  2018/7/14   0.2.6      Add Auth/Enroll capture image param.
+ * Martin Wu  2018/7/20   0.2.7      Add postprocess normalize param.
+ * Martin Wu  2018/7/23   0.2.8      Add postprocess remove deadpx param.
+ * Martin Wu  2018/7/25   0.2.9      Add R9O03 spd param.
+ * Martin Wu  2018/7/30   0.3.0      Add enroll/auth quality param.
+ * Martin Wu  2018/8/1    0.3.1      Add optic finger detect param.
+ * Martin Wu  2018/8/4    0.3.2      Add post-enroll control param.
+ * Martin Wu  2018/8/11   0.3.3      Add icon detect param.
  *
  *****************************************************************************/
 
@@ -407,7 +415,7 @@ static int32_t _xml_param_check_dev_ver(const XMLElement *rootElement, cf_set_t*
 static int32_t _xml_get_param_algparam(const XMLElement *iParentElement, cf_set_t* pcfgs, e_pb_param_t type)
 {
     uint32_t number;
-    static const char *param_name[] = {"C_AlgParmA", "C_AlgParmN", "C_AlgParmC", "C_AlgParmB", "C_AlgParmAp"};
+    static const char *param_name[] = {"C_AlgParmA", "C_AlgParmN", "C_AlgParmC", "C_AlgParmB", "C_AlgParmAp", "C_AlgParmOpt", "C_AlgParmFd"};
 
     do {
         const XMLElement *algParamElement = iParentElement->FirstChildElement(param_name[type]);
@@ -459,6 +467,7 @@ static int32_t _xml_get_param_algparam(const XMLElement *iParentElement, cf_set_
 
 static int32_t _xml_param_get_sysparam(const XMLElement *rootElement, cf_set_t* pcfgs)
 {
+    int32_t i = 0;
     uint32_t value32;
     int32_t valuei32;
     do {
@@ -475,11 +484,9 @@ static int32_t _xml_param_get_sysparam(const XMLElement *rootElement, cf_set_t* 
 
         const XMLElement *algElement = sysparamElement->FirstChildElement("SLAlg");
         if (algElement != NULL) {
-            _xml_get_param_algparam(algElement, pcfgs, CFG_PB_PARAM_FINETUNE);
-            _xml_get_param_algparam(algElement, pcfgs, CFG_PB_PARAM_NAVI);
-            _xml_get_param_algparam(algElement, pcfgs, CFG_PB_PARAM_COVER);
-            _xml_get_param_algparam(algElement, pcfgs, CFG_PB_PARAM_BASE);
-            _xml_get_param_algparam(algElement, pcfgs, CFG_PB_PARAM_REDUCE_NOISE);
+            for (i = 0; i < CFG_PB_PARAM_MAX; i++) {
+                _xml_get_param_algparam(algElement, pcfgs, (e_pb_param_t)i);
+            }
 
             XML_UPD_VALUE_UINT_2(algElement, "partial_read_w", pcfgs, common, wp, value32, uint32_t);
             XML_UPD_VALUE_UINT_2(algElement, "partial_read_h", pcfgs, common, hp, value32, uint32_t);
@@ -487,6 +494,8 @@ static int32_t _xml_param_get_sysparam(const XMLElement *rootElement, cf_set_t* 
             XML_UPD_VALUE_UINT_2(algElement, "hwagc_h", pcfgs, common, h_hwagc, value32, uint32_t);
             XML_UPD_VALUE_UINT_2(algElement, "cut_w", pcfgs, common, wc, value32, uint32_t);
             XML_UPD_VALUE_UINT_2(algElement, "cut_h", pcfgs, common, hc, value32, uint32_t);
+            XML_UPD_VALUE_UINT_2(algElement, "wdpi", pcfgs, common, wdpi, value32, uint32_t);
+            XML_UPD_VALUE_UINT_2(algElement, "hdpi", pcfgs, common, hdpi, value32, uint32_t);
 
             XML_UPD_VALUE_UINT_2(algElement, "nav_read_w", pcfgs, nav, w, value32, uint32_t);
             XML_UPD_VALUE_UINT_2(algElement, "nav_read_h", pcfgs, nav, h, value32, uint32_t);
@@ -535,15 +544,25 @@ static int32_t _xml_param_get_sysparam(const XMLElement *rootElement, cf_set_t* 
             XML_UPD_VALUE_UINT_2(algElement, "storage_interval", pcfgs, mmi, storage_interval, value32, uint8_t);
             XML_UPD_VALUE_UINT_2(algElement, "sum_type", pcfgs, mmi, sum_type, value32, uint8_t);
             XML_UPD_VALUE_UINT_2(algElement, "dpx_radius", pcfgs, mmi, deadpx_radius, value32, uint8_t);
-            XML_UPD_VALUE_UINT_2(algElement, "auth_reverse_grey", pcfgs, mmi, auth_reverse_grey, value32, uint8_t);
+            XML_UPD_VALUE_UINT_2(algElement, "cut_radius", pcfgs, mmi, cut_radius, value32, uint8_t);
+            XML_UPD_VALUE_UINT_2(algElement, "auth_reverse_skip", pcfgs, ci, auth_reverse_skip, value32, uint8_t);
+            XML_UPD_VALUE_UINT_2(algElement, "auth_reverse_grey", pcfgs, ci, auth_reverse_grey, value32, uint8_t);
+            XML_UPD_VALUE_UINT_2(algElement, "enroll_loop", pcfgs, ci, enroll_loop, value32, uint8_t);
+            XML_UPD_VALUE_UINT_2(algElement, "enroll_skip", pcfgs, ci, enroll_skip, value32, uint8_t);
 
-            XML_UPD_VALUE_UINT_HEX_2(algElement, "shutterleft", pcfgs, aec, left, value32);
-            XML_UPD_VALUE_UINT_HEX_2(algElement, "shutterright", pcfgs, aec, right, value32);
-            XML_UPD_VALUE_UINT_2(algElement, "aec_maxlooptime", pcfgs, aec, max_loop, value32, uint8_t);
-            XML_UPD_VALUE_UINT_2(algElement, "aec_meanMin", pcfgs, aec, mean_min, value32, uint8_t);
-            XML_UPD_VALUE_UINT_2(algElement, "aec_meanMax", pcfgs, aec, mean_max, value32, uint8_t);
-            XML_UPD_VALUE_UINT_2(algElement, "aec_sram_time", pcfgs, aec, time, value32, uint8_t);
-            XML_UPD_VALUE_UINT_2(algElement, "aec_pclk", pcfgs, aec, pclk, value32, uint8_t);
+            XML_UPD_VALUE_UINT_HEX_2(algElement, "shutterleft", pcfgs, pp, aec_left, value32);
+            XML_UPD_VALUE_UINT_HEX_2(algElement, "shutterright", pcfgs, pp, aec_right, value32);
+            XML_UPD_VALUE_UINT_2(algElement, "aec_sram_time", pcfgs, pp, aec_time, value32, uint8_t);
+            XML_UPD_VALUE_UINT_2(algElement, "cal_maxlooptime", pcfgs, pp, cal_max_loop, value32, uint8_t);
+            XML_UPD_VALUE_UINT_2(algElement, "dead_a", pcfgs, pp, dead_a, value32, uint8_t);
+            XML_UPD_VALUE_UINT_2(algElement, "dead_b", pcfgs, pp, dead_b, value32, uint8_t);
+            XML_UPD_VALUE_UINT_HEX_2(algElement, "quality_cut", pcfgs, pp, quality_cut, value32);
+            XML_UPD_VALUE_INT_2(algElement, "quality_thr", pcfgs, pp, quality_thr, valuei32, int16_t);
+            XML_UPD_VALUE_UINT_2(algElement, "enroll_quality_chk_num", pcfgs, pp, enroll_quality_chk_num, value32, uint8_t);
+            XML_UPD_VALUE_UINT_2(algElement, "enroll_post_num", pcfgs, pp, enroll_post_num, value32, uint8_t);
+            XML_UPD_VALUE_UINT_HEX_2(algElement, "enroll_post_mask", pcfgs, pp, enroll_post_mask, value32);
+            XML_UPD_VALUE_INT_2(algElement, "icon_ratio_z", pcfgs, pp, icon_ratio_z, valuei32, int16_t);
+            XML_UPD_VALUE_INT_2(algElement, "icon_ratio_m", pcfgs, pp, icon_ratio_m, valuei32, int16_t);
 
             XML_UPD_VALUE_UINT_2(algElement, "ft_line_step_min", pcfgs, ft, line_step_min, value32, uint8_t);
             XML_UPD_VALUE_UINT_2(algElement, "ft_ignore", pcfgs, ft, ignore, value32, uint8_t);
@@ -553,6 +572,10 @@ static int32_t _xml_param_get_sysparam(const XMLElement *rootElement, cf_set_t* 
             XML_UPD_VALUE_INT_2(algElement, "ft_line_distance_min", pcfgs, ft, line_distance_min, valuei32, int16_t);
             XML_UPD_VALUE_INT_2(algElement, "ft_line_distance_max", pcfgs, ft, line_distance_max, valuei32, int16_t);
             XML_UPD_VALUE_UINT_HEX_2(algElement, "ft_cut", pcfgs, ft, cut, value32);
+
+            XML_UPD_VALUE_UINT_2(algElement, "normalize_blk", pcfgs, mmi, normalize_blk, value32, uint16_t);
+            XML_UPD_VALUE_UINT_2(algElement, "normalize_ratio", pcfgs, mmi, normalize_ratio, value32, uint32_t);
+            XML_UPD_VALUE_UINT_2(algElement, "fft_ratio", pcfgs, mmi, fft_ratio, value32, uint32_t);
 
             XML_UPD_VALUE_UINT_3(algElement, "touch_center_x", pcfgs, mmi, touch_info, center_x, value32, uint32_t);
             XML_UPD_VALUE_UINT_3(algElement, "touch_center_y", pcfgs, mmi, touch_info, center_y, value32, uint32_t);
@@ -783,10 +806,14 @@ static int32_t _xml_config_get_pb_config(const XMLElement *algElement, cf_set_t*
         XML_UPD_VALUE_UINT_3(algElement, "noise_coe", pcfgs, pb, threshold, noise_coe, value32, uint32_t);
         XML_UPD_VALUE_UINT_3(algElement, "gray_prec", pcfgs, pb, threshold, gray_prec, value32, uint32_t);
         XML_UPD_VALUE_UINT_3(algElement, "water_detect_threshold", pcfgs, pb, threshold, water_detect_threshold, value32, uint32_t);
+        XML_UPD_VALUE_UINT_3(algElement, "fail_threshold", pcfgs, pb, threshold, fail_threshold, value32, uint16_t);
+        XML_UPD_VALUE_UINT_3(algElement, "spd_flag", pcfgs, pb, threshold, spd_flag, value32, uint8_t);
 
         XML_UPD_VALUE_FAR_3(algElement, "iverify_far_high_threshold", pcfgs, pb, threshold, identify_far_threshold, value32, int32_t);
         XML_UPD_VALUE_FAR_3(algElement, "iverify_uptem_threshold", pcfgs, pb, threshold, update_far_threshold, value32, int32_t);
         XML_UPD_VALUE_FAR_3(algElement, "isamearea_verify_threshold", pcfgs, pb, threshold, samearea_threshold, value32, uint16_t);
+        XML_UPD_VALUE_FAR_3(algElement, "isamefinger_verify_threshold", pcfgs, pb, threshold, samefinger_threshold, value32, uint16_t);
+        XML_UPD_VALUE_FAR_3(algElement, "verify_epay_threshold", pcfgs, pb, threshold, identify_epay_threshold, value32, uint16_t);
     } while (0);
 
     return 0;
@@ -988,10 +1015,10 @@ extern "C" int32_t silfp_xml_dump_all_sysparams(void)
                 if (pcfgs == NULL) {
                     break;
                 }
+                _xml_config_get_default(pcfgs);
                 ret = _xml_param_get_from_xml(dirs[i], pEntry->d_name, pcfgs, 1);
                 if (ret >= 0) {
                     _xml_config_get_from_xml(dirs[i], pEntry->d_name, pcfgs);
-                    _xml_config_get_default(pcfgs);
                     silfp_cfg_dump_data(pcfgs, pEntry->d_name, 0);
 
                     _xml_dump_check_update(pcfgs, pEntry->d_name);

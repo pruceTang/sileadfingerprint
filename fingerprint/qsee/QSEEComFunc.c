@@ -158,7 +158,7 @@ exit:
         free(handle);
         handle = NULL;
     }
-    if(data->libHandle != NULL) {
+    if(data != NULL && data->libHandle != NULL) {
         dlclose(data->libHandle);
         data->libHandle = NULL;
     }

@@ -89,7 +89,9 @@ static const char dump_prefix[][16] = {
 #define FP_CONFIG_DOWN_BIT  0x0004
 #define FP_CONFIG_UPDATE_MASK (FP_CONFIG_CHG_BIT|FP_CONFIG_UP_BIT|FP_CONFIG_DOWN_BIT)
 #define FP_CONFIG_NEED_UPDATE(x) (!!(FP_CONFIG_UPDATE_MASK == ((x)&FP_CONFIG_UPDATE_MASK)))
+#ifndef FP_CONFIG_PATH
 #define FP_CONFIG_PATH "/persist/silead/"
+#endif /* !FP_CONFIG_PATH */
 #define FP_CONFIG_NAME "fpconfig.dat"
 #define FP_CONFIG_FILE (FP_CONFIG_PATH FP_CONFIG_NAME)
 #define FP_OPTIC_CAL_NAME1 "fpcal1.dat"
@@ -106,11 +108,13 @@ static const char dump_prefix[][16] = {
 #define FP_OPTIC_DEADPX_FILE (FP_CONFIG_PATH FP_OPTIC_DEADPX_NAME)
 
 /******add by pruce_tang_20180616 for interface match  --start*****/
-#define FP_CONFIG_SCREEN_HBM_PATH "/sys/devices/virtual/graphics/fb0/hbm"
-#define FP_CONFIG_SCREEN_HBM_PATH2 "/sys/kernel/oppo_display/hbm"
-#define FP_CONFIG_SCREEN_BRIGHTNESS_PATH "/sys/class/backlight/panel0-backlight/brightness"
-#define FP_CONFIG_SCREEN_BRIGHTNESS_PATH2 "/sys/class/leds/lcd-backlight/brightness"
+#define FP_CONFIG_SCREEN_HBM_PATH "XXXXXXXXXX1"
+#define FP_CONFIG_SCREEN_HBM_PATH2 "XXXXXXXXXX2"
+#define FP_CONFIG_SCREEN_BRIGHTNESS_PATH "XXXXXXXXXX3"
+#define FP_CONFIG_SCREEN_BRIGHTNESS_PATH2 "XXXXXXXXXX4"
 /******add by pruce_tang_20180616 for interface match  --end*****/
+
+#define BUF_SIZE   132*1024
 
 static int32_t m_dev_fd = 0;
 static const silead_fp_handle_t *m_fp_impl_handler = NULL;
@@ -137,7 +141,7 @@ static int32_t _sl_fp_calibrate_step(uint32_t step, uint32_t init);
 fingerprint_tp_info_t m_pre_tp_touch_info;
 fingerprint_tp_info_t m_later_tp_touch_info;
 
-void sileadHypnusSetAction()
+void sl_fp_capture_pre()
 {
 }
 
@@ -413,7 +417,7 @@ int32_t sl_fp_capture_image(int32_t __unused times)
         if (m_fp_impl_handler->fp_capture_image != NULL) {
 #ifdef SL_FP_FEATURE_OPPO_CUSTOMIZE
             if (!times) {
-                sileadHypnusSetAction();
+                sl_fp_capture_pre();
             }
 #endif
             silfp_dev_enable(m_dev_fd);
@@ -965,7 +969,7 @@ static int32_t _fp_init()
     }
 
     if (m_fp_impl_handler == NULL) {
-        m_fp_impl_handler = silfp_get_impl_handler();
+        m_fp_impl_handler = silfp_get_impl_handler(dev_init.ta[0]?dev_init.ta:NULL);
     }
 
     _fp_update_all_log_level();
@@ -1519,14 +1523,14 @@ int32_t sl_fp_ci_chk_finger(void)
     return ret;
 }
 
-int32_t sl_fp_ci_adj_gain(void)
+int32_t sl_fp_ci_adj_gain(int32_t enroll)
 {
     int32_t ret = -SL_ERROR_TA_OPEN_FAILED;
 
     if (m_fp_impl_handler != NULL) {
         if (m_fp_impl_handler->fp_ci_adj_gain != NULL) {
             silfp_dev_enable(m_dev_fd);
-            ret = m_fp_impl_handler->fp_ci_adj_gain();
+            ret = m_fp_impl_handler->fp_ci_adj_gain(enroll);
             silfp_dev_disable(m_dev_fd);
         } else {
             LOG_MSG_DEBUG("No implement fp_ci_adj_gain");
@@ -1536,14 +1540,14 @@ int32_t sl_fp_ci_adj_gain(void)
     return ret;
 }
 
-int32_t sl_fp_ci_shot(void)
+int32_t sl_fp_ci_shot(int32_t enroll)
 {
     int32_t ret = -SL_ERROR_TA_OPEN_FAILED;
 
     if (m_fp_impl_handler != NULL) {
         if (m_fp_impl_handler->fp_ci_shot != NULL) {
             silfp_dev_enable(m_dev_fd);
-            ret = m_fp_impl_handler->fp_ci_shot();
+            ret = m_fp_impl_handler->fp_ci_shot(enroll);
             silfp_dev_disable(m_dev_fd);
         } else {
             LOG_MSG_DEBUG("No implement fp_ci_shot");
@@ -1574,7 +1578,6 @@ int32_t sl_fp_alg_set_param(uint32_t idx, void *buffer, uint32_t *plen, uint32_t
     return ret;
 }
 
-#define BUF_SIZE   130*1024
 static char *_sl_fp_get_cal_file(uint32_t step)
 {
     switch(step&0xF) {
@@ -1645,7 +1648,9 @@ static int32_t _sl_fp_calibrate_step(uint32_t step, uint32_t init)
         }
     }
 
-    sl_fp_download_normal();
+    if ((step >= 1) && (step <= 3)) {
+        sl_fp_download_normal();
+    }
     LOG_MSG_DEBUG("fp_calibrate_optic step %d", step_ta);
 
     if (m_fp_impl_handler != NULL) {
@@ -1655,6 +1660,10 @@ static int32_t _sl_fp_calibrate_step(uint32_t step, uint32_t init)
             silfp_dev_disable(m_dev_fd);
             if ((((ret >= 0) && !(step_ta&0xF0)) || ((ret > 10) && (step_ta&0xF0))) && ((step >= 1 && step <= 5))) {
                 silfp_storage_save_config(FP_CONFIG_PATH, _sl_fp_get_cal_name(step), buf, len);
+                if ((step >= 1) && (step <= 3)) {
+                    silfp_storage_remove_file(_sl_fp_get_cal_file(4));
+                    silfp_storage_remove_file(_sl_fp_get_cal_file(5));
+                }
             }
         } else {
             LOG_MSG_DEBUG("No implement fp_calibrate_optic");
@@ -1667,7 +1676,7 @@ static int32_t _sl_fp_calibrate_step(uint32_t step, uint32_t init)
     }
 
 #ifdef SIL_DUMP_IMAGE
-    if ((ret >= 0) && !(step_ta&0xF0) && ((step >= 1) && (step <= 3))) {
+    if ((ret >= 0) &&/* !(step_ta&0xF0) && */((step >= 1) && (step <= 3))) {
         sl_fp_dump_data(DUMP_IMG_RAW);
     }
 #endif /* SIL_DUMP_IMAGE */
@@ -1745,6 +1754,21 @@ int32_t sl_fp_optic_test_snr(uint32_t *snr, uint32_t *noise, uint32_t *signal)
     uint32_t len = sizeof(snr_result);
     uint32_t result = 0;
 
+#ifdef SIL_DUMP_IMAGE
+    int32_t ret2 = 0;
+    uint32_t dump_len = 0;
+    uint8_t *dump_buf = NULL;
+    uint32_t dump_result = 0;
+    uint32_t width = 0;
+    uint32_t height = 0;
+    uint8_t dump_remaining = 0;
+    uint8_t step = 0;
+#endif
+
+    uint32_t snr_finish_result[4] = {0};
+    uint32_t snr_finish_len = sizeof(snr_finish_result);
+    uint32_t finish_result = 0;
+
     ret = -SL_ERROR_TA_OPEN_FAILED;
     if (m_fp_impl_handler != NULL) {
         if (m_fp_impl_handler->fp_test_cmd != NULL) {
@@ -1752,6 +1776,37 @@ int32_t sl_fp_optic_test_snr(uint32_t *snr, uint32_t *noise, uint32_t *signal)
             ret = m_fp_impl_handler->fp_test_cmd(cmd_ta, (uint8_t *)snr_result, &len, &result);
             silfp_dev_disable(m_dev_fd);
             LOG_MSG_DEBUG("ret: %d, snr:%d, noise:%d,  signal:%d", ret, snr_result[0], snr_result[1], snr_result[2]);
+
+#ifdef SIL_DUMP_IMAGE
+            cmd_ta = 0xC0000001;
+            dump_buf = malloc(BUF_SIZE);
+            if (dump_buf != NULL) {
+                do {
+                    dump_len = BUF_SIZE;
+                    dump_buf[0] = (step & 0xFF);
+                    step++;
+                    ret2 = m_fp_impl_handler->fp_test_cmd(cmd_ta, (uint8_t *)dump_buf, &dump_len, &dump_result);
+                    if (ret2 >= 0) {
+                        width = (dump_result & 0x0000FFFF);
+                        height = (dump_result >> 16 & 0x0000FFFF);
+                        LOG_MSG_DEBUG("width = %d, height = %d, size = %d", width, height, dump_len);
+                        if (dump_len >= width * height + 1) {
+                            dump_remaining = dump_buf[0];
+                            LOG_MSG_DEBUG("dump_remaining = %d", dump_remaining);
+                            silfp_bmp_save(dump_buf + 1, "snr", width * height, width, height);
+                        }
+                    } else {
+                        LOG_MSG_ERROR("dump error (%d)", ret2);
+                    }
+                } while (ret2 >= 0 && dump_remaining > 0);
+                free(dump_buf);
+            } else {
+                LOG_MSG_ERROR("malloc dump buf failed");
+            }
+#endif
+
+            cmd_ta = 0x80000001;
+            m_fp_impl_handler->fp_test_cmd(cmd_ta, (uint8_t *)snr_finish_result, &snr_finish_len, &finish_result);
         } else {
             LOG_MSG_DEBUG("No implement fp_test_cmd");
         }

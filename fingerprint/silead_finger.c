@@ -729,7 +729,7 @@ static int _silfp_finger_capture_image(int32_t __unused type, int32_t __unused t
     int ret = SL_SUCCESS;
 
     if (!times) {
-        sileadHypnusSetAction();
+        sl_fp_capture_pre();
     }
 /**tp info struct for underglass fingerprint,add by pruce_tang_20180710 start **/
 	sl_init_tp_touch_info();
@@ -738,17 +738,17 @@ static int _silfp_finger_capture_image(int32_t __unused type, int32_t __unused t
     ret = sl_fp_ci_chk_finger();
     if (ret >= 0) {
         do {
-            ret = sl_fp_ci_adj_gain();
+            ret = sl_fp_ci_adj_gain(enroll);
         } while(ret > 0);
     }
 
 #ifdef SIL_DUMP_IMAGE
-    sl_fp_dump_data(type ? DUMP_IMG_AUTH_ORIG : DUMP_IMG_ENROLL_ORIG);
+    sl_fp_dump_data(enroll ? DUMP_IMG_ENROLL_ORIG : DUMP_IMG_AUTH_ORIG);
 #endif
 /**tp info struct for underglass fingerprint,add by pruce_tang_20180710 start **/
     silfp_get_tp_touch_info(1);
     if (ret >= 0) {
-        ret = sl_fp_ci_shot();
+        ret = sl_fp_ci_shot(enroll);
     }
 
 #ifdef SIL_DUMP_IMAGE
@@ -767,8 +767,15 @@ static int _finger_enroll_command()
     uint32_t fid;
     int status = -1;
     uint32_t enroll_time;
+    uint32_t err_cont = 0;
 
     LOG_MSG_INFO("enroll-------------");
+
+    remaining = silfp_get_enroll_total_times();
+    if (remaining == 0) { // should not happend, just in case
+        remaining = 999;
+    }
+
     enroll_time = _finger_get_time();
     if (enroll_time < m_pre_enroll_time || enroll_time - m_pre_enroll_time >= ENROLL_TIME_OUT_MAX) {
         _finger_send_error_notice(FINGERPRINT_ERROR_TIMEOUT);
@@ -806,11 +813,7 @@ static int _finger_enroll_command()
 #endif
 
             if (ret >= 0) {
-#ifndef SIL_DUMP_IMAGE
-                ret = sl_fp_capture_image(0);
-#else
-                ret = _silfp_finger_capture_image(0, 0);
-#endif
+                ret = _silfp_finger_capture_image(1, 0);
             }
             if (ret >= 0) {
                 ret = sl_fp_enroll_step(&remaining);
@@ -820,9 +823,15 @@ static int _finger_enroll_command()
             }
 
             if (ret < 0) {
-                LOG_MSG_DEBUG("enroll: err(%d)", -ret);
+                err_cont ++;
+                LOG_MSG_DEBUG("enroll: err(%d), err_num(%d)", -ret, err_cont);
 #ifdef SL_FP_FEATURE_OPPO_CUSTOMIZE
-                switch (ret) {
+                if (ret == -SL_ERROR_CANCELED) { // canceled
+                    break;
+                } else if (err_cont >= 10) {
+                    _finger_send_error_notice(FINGERPRINT_ERROR_UNABLE_TO_PROCESS);
+                } else {
+                    switch (ret) {
                     case -SL_ERROR_CANCELED: {
                         break;
                     }
@@ -860,6 +869,10 @@ static int _finger_enroll_command()
                         _finger_send_error_notice(-ret);
                         break;
                     }
+                    }
+                    if (ret != -SL_ERROR_EROLL_DUPLICATE) {
+                        _finger_send_enroll_notice(0, remaining);
+                    }
                 }
 #else
                 if (ret == -SL_ERROR_CANCELED) { // canceled
@@ -872,6 +885,7 @@ static int _finger_enroll_command()
                 }
 #endif
             } else {
+                err_cont = 0;
                 if (remaining > 0) {
                     _finger_send_acquired_notice(FINGERPRINT_ACQUIRED_GOOD);
                     _finger_send_enroll_notice(0, remaining);
@@ -920,6 +934,7 @@ static int _finger_auth_command()
     int status = -1;
     int i = 0;
     const int retry_max = 3;
+    int auth_step = 0;
 
     LOG_MSG_DEBUG("authenticate-------------");
 
@@ -933,16 +948,14 @@ static int _finger_auth_command()
             }
 #endif
             if (ret >= 0) {
+                auth_step = 0;
                 for (i = 0; i < retry_max; i++) {
                     silfp_stats_start();
-#ifndef SIL_DUMP_IMAGE
-                    ret = sl_fp_capture_image(i);
-#else
-                    ret = _silfp_finger_capture_image(1, i);
-#endif
+                    ret = _silfp_finger_capture_image(0, i);
                     if (ret >= 0) {
                         silfp_stats_capture_image();
-                        ret = sl_fp_auth_step(m_auth_op_id, i, (uint32_t *)&fid);
+                        ret = sl_fp_auth_step(m_auth_op_id, auth_step, (uint32_t *)&fid);
+                        auth_step++;
 #ifdef SIL_DUMP_IMAGE
                         sl_fp_dump_data((ret >=0) ? DUMP_IMG_AUTH_SUCC : DUMP_IMG_AUTH_FAIL);
 #endif /* SIL_DUMP_IMAGE */
@@ -1311,7 +1324,11 @@ int silfp_wait_for_finger_ready()
         usleep(100 * 25); // 2.5ms
     }
     silfp_clear_finger_ready_flag();
-    return -SL_ERROR_CANCELED;
+
+    if (silfp_finger_is_canceled()) {
+        return -SL_ERROR_CANCELED;
+    }
+    return 0;
 }
 
 void _send_fingerprint_cmd_notice(int32_t cmd_id, int8_t *result, uint32_t len)

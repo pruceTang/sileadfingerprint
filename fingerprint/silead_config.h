@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   silead_config.h
- * @brief  Contains Chip config files operate functions header file.
+ * @brief  Contains Chip configurations header file.
  *
  *
  * Copyright (c) 2016-2017 Silead Inc.
@@ -31,6 +31,14 @@
  * Martin Wu  2018/6/30   0.2.3      Add distortion & finger_num param.
  * Martin Wu  2018/7/4    0.2.4      Add AEC param.
  * Martin Wu  2018/7/6    0.2.5      Add dead pixel radius.
+ * Martin Wu  2018/7/14   0.2.6      Add Auth/Enroll capture image param.
+ * Martin Wu  2018/7/20   0.2.7      Add postprocess normalize param.
+ * Martin Wu  2018/7/23   0.2.8      Add postprocess remove deadpx param.
+ * Martin Wu  2018/7/25   0.2.9      Add R9O03 spd param.
+ * Martin Wu  2018/7/30   0.3.0      Add enroll/auth quality param.
+ * Martin Wu  2018/8/1    0.3.1      Add optic finger detect param.
+ * Martin Wu  2018/8/4    0.3.2      Add post-enroll control param.
+ * Martin Wu  2018/8/11   0.3.3      Add icon detect param.
  *
  *****************************************************************************/
 
@@ -122,6 +130,10 @@ typedef struct __attribute__ ((packed)) _sl_pb_threshold {
     uint32_t noise_coe;
     uint32_t gray_prec;
     uint32_t water_detect_threshold;
+    uint16_t fail_threshold;
+    uint8_t  spd_flag;
+    uint16_t samefinger_threshold;
+    uint16_t identify_epay_threshold;
     uint32_t updated;
 } cf_algo_param_t;
 
@@ -131,6 +143,8 @@ typedef enum {
     CFG_PB_PARAM_COVER,
     CFG_PB_PARAM_BASE,
     CFG_PB_PARAM_REDUCE_NOISE,
+    CFB_PB_PARAM_OPT_PARMC,
+    CFB_PB_PARAM_OPT_FD,
     CFG_PB_PARAM_MAX,
 } e_pb_param_t;
 
@@ -291,21 +305,30 @@ typedef struct __attribute__ ((packed)) _sl_mmi {
     uint8_t storage_interval;
     uint8_t sum_type;
     uint8_t deadpx_radius;
-    uint8_t auth_reverse_grey;
+    uint8_t cut_radius;
+    uint16_t normalize_blk;
+    uint32_t normalize_ratio;
+    uint32_t fft_ratio;
     cf_touch_info_t touch_info;
     uint32_t updated;
 } cf_mmi_t;
 
-typedef struct __attribute__ ((packed)) _sl_aec {
-    uint32_t left;
-    uint32_t right;
-    uint8_t max_loop;
-    uint8_t mean_min;
-    uint8_t mean_max;
-    uint8_t time;
-    uint8_t pclk;
+typedef struct __attribute__ ((packed)) _sl_pp {
+    uint32_t aec_left;
+    uint32_t aec_right;
+    uint8_t aec_time;
+    uint8_t cal_max_loop;
+    uint8_t dead_a;
+    uint8_t dead_b;
+    uint32_t quality_cut;
+    uint16_t quality_thr;
+    uint8_t enroll_quality_chk_num;  // the max number to check enroll image quality
+    uint8_t enroll_post_num;  // the number which used for post-enroll process
+    uint32_t enroll_post_mask;  // the mask indicate the post-enroll number for each step
+    uint16_t icon_ratio_z;
+    uint16_t icon_ratio_m;
     uint32_t updated;
-} cf_aec_t;
+} cf_pp_t;
 
 typedef struct __attribute__ ((packed)) _sl_ft {
     uint8_t line_step_min;
@@ -329,6 +352,14 @@ typedef struct __attribute__ ((packed)) _sl_esd {
     uint32_t updated;
 } cf_esd_t;
 
+typedef struct __attribute__ ((packed)) _sl_ci {
+    uint8_t auth_reverse_skip;
+    uint8_t auth_reverse_grey;
+    uint8_t enroll_loop;
+    uint8_t enroll_skip;
+    uint32_t updated;
+} cf_ci_t;
+
 typedef struct __attribute__ ((packed)) _sl_config_set {
     cf_dev_list_t dev;
     uint32_t mask[3]; /* ChipID match masks */
@@ -338,11 +369,17 @@ typedef struct __attribute__ ((packed)) _sl_config_set {
     cf_pb_config_t pb;
     cf_test_t test;
     cf_mmi_t mmi;
-    cf_aec_t aec;
+    cf_pp_t pp;
     cf_ft_t ft;
     cf_esd_t esd;
+    cf_ci_t ci;
     cf_mode_config_t cfg[CFG_MAX];
 } cf_set_t;
+
+typedef struct __attribute__ ((packed)) _sl_icon_ref {
+    uint8_t *val;
+    uint32_t len;
+} icon_ref_t;
 
 #ifdef __cplusplus
 extern "C" {
@@ -359,6 +396,7 @@ cf_set_t * silfp_cfg_init(int32_t fd);
 void silfp_cfg_deinit(cf_set_t *pcfgs);
 
 const char * silfp_cfg_get_config_name(const uint32_t idx);
+const char *silfp_cfg_get_param_name(const uint32_t idx);
 
 int32_t silfp_cfg_get_update_length(cf_set_t *pcfgs);
 int32_t silfp_cfg_get_update_buffer(void *buffer, const uint32_t len, const cf_set_t *pcfgs);
@@ -464,7 +502,10 @@ uint32_t silfp_cfg_xml_config_support(void);
 #define cfg_upd_index_mmi_storage_interval      24
 #define cfg_upd_index_mmi_sum_type              25
 #define cfg_upd_index_mmi_deadpx_radius         26
-#define cfg_upd_index_mmi_auth_reverse_grey     27
+#define cfg_upd_index_mmi_cut_radius            27
+#define cfg_upd_index_mmi_normalize_blk         28
+#define cfg_upd_index_mmi_normalize_ratio       29
+#define cfg_upd_index_mmi_fft_ratio             30
 
 #define cfg_upd_index_mmi_touch_info_center_x                   0
 #define cfg_upd_index_mmi_touch_info_center_y                   1
@@ -474,13 +515,19 @@ uint32_t silfp_cfg_xml_config_support(void);
 #define cfg_upd_index_mmi_touch_info_c1_coverage_threshold      5
 #define cfg_upd_index_mmi_touch_info_c2_coverage_threshold      6
 
-#define cfg_upd_index_aec_left                  1
-#define cfg_upd_index_aec_right                 2
-#define cfg_upd_index_aec_max_loop              3
-#define cfg_upd_index_aec_mean_min              4
-#define cfg_upd_index_aec_mean_max              5
-#define cfg_upd_index_aec_time                  6
-#define cfg_upd_index_aec_pclk                  7
+#define cfg_upd_index_pp_aec_left                  1
+#define cfg_upd_index_pp_aec_right                 2
+#define cfg_upd_index_pp_aec_time                  3
+#define cfg_upd_index_pp_cal_max_loop              4
+#define cfg_upd_index_pp_dead_a                    5
+#define cfg_upd_index_pp_dead_b                    6
+#define cfg_upd_index_pp_quality_cut               7
+#define cfg_upd_index_pp_quality_thr               8
+#define cfg_upd_index_pp_enroll_quality_chk_num    9
+#define cfg_upd_index_pp_enroll_post_num           10
+#define cfg_upd_index_pp_enroll_post_mask          11
+#define cfg_upd_index_pp_icon_ratio_z              12
+#define cfg_upd_index_pp_icon_ratio_m              13
 
 #define cfg_upd_index_ft_line_step_min      0
 #define cfg_upd_index_ft_ignore             1
@@ -497,6 +544,11 @@ uint32_t silfp_cfg_xml_config_support(void);
 #define cfg_upd_index_esd_int_reg               3
 #define cfg_upd_index_esd_int_val               4
 #define cfg_upd_index_esd_int_beacon            5
+
+#define cfg_upd_index_ci_auth_reverse_skip      0
+#define cfg_upd_index_ci_auth_reverse_grey      1
+#define cfg_upd_index_ci_enroll_loop            2
+#define cfg_upd_index_ci_enroll_skip            3
 
 #define cfg_upd_index_pb_agc_skip_fd                0
 #define cfg_upd_index_pb_agc_fd_threshold           1
@@ -533,6 +585,10 @@ uint32_t silfp_cfg_xml_config_support(void);
 #define cfg_upd_index_pb_threshold_noise_coe                    22
 #define cfg_upd_index_pb_threshold_gray_prec                    23
 #define cfg_upd_index_pb_threshold_water_detect_threshold       24
+#define cfg_upd_index_pb_threshold_fail_threshold               25
+#define cfg_upd_index_pb_threshold_spd_flag                     26
+#define cfg_upd_index_pb_threshold_samefinger_threshold         27
+#define cfg_upd_index_pb_threshold_identify_epay_threshold      28
 
 #define GET_UPD_VALUE(cfg, upd_cfg, a) \
     if ((upd_cfg->updated & (1 << cfg_upd_index_##a)) != 0) { \

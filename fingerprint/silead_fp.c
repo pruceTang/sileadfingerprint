@@ -49,6 +49,7 @@
 #define _tz_send_modified_command_get_1d_2r(cmd, p, l, d, r1, r2)           silfp_ca_send_modified_command(cmd, p, l, 1, d, 0, r1, r2)
 #define _tz_send_modified_command_and_get(cmd, p, l)                        silfp_ca_send_modified_command(cmd, p, l, 2, 0, 0, NULL, NULL)
 #define _tz_send_modified_command_get_1d_2r_always(cmd, p, l, d, r1, r2)    silfp_ca_send_modified_command(cmd, p, l, 3, d, 0, r1, r2)
+#define _tz_send_modified_command_1d_2r_and_get_always(cmd, p, l, d, r1, r2) silfp_ca_send_modified_command(cmd, p, l, 4, d, 0, r1, r2)
 #define _tz_send_normal_command(cmd)                                    silfp_ca_send_normal_command(cmd, 0, 0, 0, 0, NULL, NULL, NULL)
 #define _tz_send_normal_command_1d(cmd, d)                              silfp_ca_send_normal_command(cmd, d, 0, 0, 0, NULL, NULL, NULL)
 #define _tz_send_normal_command_2d(cmd, d1, d2)                         silfp_ca_send_normal_command(cmd, d1, d2, 0, 0, NULL, NULL, NULL)
@@ -61,9 +62,9 @@
 #define _tz_send_normal_command_4d_2r(cmd, d1, d2, d3, d4, p1, p2)      silfp_ca_send_normal_command(cmd, d1, d2, d3, d4, p1, p2, NULL)
 #define _tz_send_normal_command_4d_3r(cmd, d1, d2, d3, d4, p1, p2, p3)  silfp_ca_send_normal_command(cmd, d1, d2, d3, d4, p1, p2, p3)
 
-static int32_t fp_tz_open(void)
+static int32_t fp_tz_open(const void *ta_name)
 {
-    return silfp_ca_open();
+    return silfp_ca_open(ta_name);
 }
 
 static int32_t fp_tz_close(void)
@@ -401,14 +402,14 @@ static int32_t fp_tz_ci_chk_finger(void)
     return _tz_send_normal_command(TZ_FP_CMD_CI_CHK_FINGER);
 }
 
-static int32_t fp_tz_ci_adj_gain(void)
+static int32_t fp_tz_ci_adj_gain(int32_t enroll)
 {
-    return _tz_send_normal_command(TZ_FP_CMD_CI_ADJ_GAIN);
+    return _tz_send_normal_command_1d(TZ_FP_CMD_CI_ADJ_GAIN, enroll);
 }
 
-static int32_t fp_tz_ci_shot(void)
+static int32_t fp_tz_ci_shot(int32_t enroll)
 {
-    return _tz_send_normal_command(TZ_FP_CMD_CI_SHOT);
+    return _tz_send_normal_command_1d(TZ_FP_CMD_CI_SHOT, enroll);
 }
 
 int32_t fp_tz_alg_set_param(uint32_t cmd, void *buffer, uint32_t *plen, uint32_t *result)
@@ -554,7 +555,7 @@ int32_t fp_tz_test_cmd(uint32_t cmd, void *buffer, uint32_t *plen, uint32_t *res
         return -SL_ERROR_BAD_PARAMS;
     }
 
-    return _tz_send_modified_command_get_1d_2r(TZ_FP_CMD_TEST_CMD, buffer, *plen, cmd, plen, result);
+    return _tz_send_modified_command_1d_2r_and_get_always(TZ_FP_CMD_TEST_CMD, buffer, *plen, cmd, plen, result);
 }
 
 /*********************************************************************************/
@@ -629,9 +630,9 @@ static const silead_fp_handle_t s_callbacks = {
     fp_tz_test_cmd,
 };
 
-const silead_fp_handle_t * silfp_get_impl_handler(void)
+const silead_fp_handle_t * silfp_get_impl_handler(const void *ta_name)
 {
-    if (fp_tz_open() < 0) {
+    if (fp_tz_open(ta_name) < 0) {
         fp_tz_deinit();
         return NULL;
     }

@@ -177,7 +177,7 @@ static int32_t _ca_close(void)
     return 0;
 }
 
-int32_t silfp_ca_nosec_register(ca_impl_handle_t* handle)
+int32_t silfp_ca_nosec_register(ca_impl_handle_t* handle, const void *ta_name)
 {
     int32_t ret;
 

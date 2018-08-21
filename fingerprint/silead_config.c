@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   silead_config.c
- * @brief  Contains Chip config files operate functions.
+ * @brief  Contains Chip register configurations.
  *
  *
  * Copyright (c) 2016-2017 Silead Inc.
@@ -32,6 +32,14 @@
  * Martin Wu  2018/6/30   0.2.3      Add distortion & finger_num param.
  * Martin Wu  2018/7/4    0.2.4      Add AEC param.
  * Martin Wu  2018/7/6    0.2.5      Add dead pixel radius.
+ * Martin Wu  2018/7/14   0.2.6      Add Auth/Enroll capture image param.
+ * Martin Wu  2018/7/20   0.2.7      Add postprocess normalize param.
+ * Martin Wu  2018/7/23   0.2.8      Add postprocess remove deadpx param.
+ * Martin Wu  2018/7/25   0.2.9      Add R9O03 spd param.
+ * Martin Wu  2018/7/30   0.3.0      Add enroll/auth quality param.
+ * Martin Wu  2018/8/1    0.3.1      Add optic finger detect param.
+ * Martin Wu  2018/8/4    0.3.2      Add post-enroll control param.
+ * Martin Wu  2018/8/11   0.3.3      Add icon detect param.
  *
  *****************************************************************************/
 
@@ -68,9 +76,10 @@ typedef struct __attribute__ ((packed)) _sl_upd_set {
     cf_pb_upd pb;
     cf_test_t test;
     cf_mmi_t mmi;
-    cf_aec_t aec;
+    cf_pp_t pp;
     cf_ft_t ft;
     cf_esd_t esd;
+    cf_ci_t ci;
     cf_data_upd_t cfg[CFG_MAX];
     cf_data_upd_t param[CFG_PB_PARAM_MAX];
     uint32_t updated;
@@ -213,7 +222,7 @@ void silfp_cfg_deinit(cf_set_t *pcfgs)
     LOG_MSG_VERBOSE("deinit");
 }
 
-const char * silfp_cfg_get_config_name(const uint32_t idx)
+const char *silfp_cfg_get_config_name(const uint32_t idx)
 {
     const char *name[] = {
         "normal",
@@ -243,6 +252,24 @@ const char * silfp_cfg_get_config_name(const uint32_t idx)
     };
 
     if (idx < CFG_MAX) {
+        return name[idx];
+    }
+    return "unknow";
+}
+
+const char *silfp_cfg_get_param_name(const uint32_t idx)
+{
+    const char *name[] = {
+        "FineTune_param",
+        "Navi_param",
+        "Cover_param",
+        "Base_param",
+        "Reduce_param",
+        "Opt_param",
+        "OptFd_param",
+    };
+
+    if (idx < CFG_PB_PARAM_MAX) {
         return name[idx];
     }
     return "unknow";
@@ -294,9 +321,10 @@ int32_t silfp_cfg_get_update_buffer(void *buffer, const uint32_t len, const cf_s
     memcpy(&pcfg_upd->pb.threshold, &pcfgs->pb.threshold, sizeof(pcfg_upd->pb.threshold));
     memcpy(&pcfg_upd->test, &pcfgs->test, sizeof(pcfg_upd->test));
     memcpy(&pcfg_upd->mmi, &pcfgs->mmi, sizeof(pcfg_upd->mmi));
-    memcpy(&pcfg_upd->aec, &pcfgs->aec, sizeof(pcfg_upd->aec));
+    memcpy(&pcfg_upd->pp, &pcfgs->pp, sizeof(pcfg_upd->pp));
     memcpy(&pcfg_upd->ft, &pcfgs->ft, sizeof(pcfg_upd->ft));
     memcpy(&pcfg_upd->esd, &pcfgs->esd, sizeof(pcfg_upd->esd));
+    memcpy(&pcfg_upd->ci, &pcfgs->ci, sizeof(pcfg_upd->ci));
 
     offset += size;
 
@@ -310,9 +338,10 @@ int32_t silfp_cfg_get_update_buffer(void *buffer, const uint32_t len, const cf_s
     LOG_MSG_VERBOSE("test.updated = %d", pcfgs->test.updated);
     LOG_MSG_VERBOSE("mmi.updated = %d", pcfgs->mmi.updated);
     LOG_MSG_VERBOSE("mmi.touch_info.updated = %d", pcfgs->mmi.touch_info.updated);
-    LOG_MSG_VERBOSE("aec.updated = %d", pcfgs->aec.updated);
+    LOG_MSG_VERBOSE("pp.updated = %d", pcfgs->pp.updated);
     LOG_MSG_VERBOSE("ft.updated = %d", pcfgs->ft.updated);
     LOG_MSG_VERBOSE("esd.updated = %d", pcfgs->esd.updated);
+    LOG_MSG_VERBOSE("ci.updated = %d", pcfgs->ci.updated);
     LOG_MSG_VERBOSE("pb.agc.updated = %d", pcfgs->pb.agc.updated);
     LOG_MSG_VERBOSE("pb.threshold.updated = %d", pcfgs->pb.threshold.updated);
 
@@ -506,7 +535,10 @@ int32_t silfp_cfg_update_config(const void *buffer, const uint32_t len, cf_set_t
     GET_UPD_VALUE_2(psyscfgs, pcfg_upd, mmi, storage_interval);
     GET_UPD_VALUE_2(psyscfgs, pcfg_upd, mmi, sum_type);
     GET_UPD_VALUE_2(psyscfgs, pcfg_upd, mmi, deadpx_radius);
-    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, mmi, auth_reverse_grey);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, mmi, cut_radius);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, mmi, normalize_blk);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, mmi, normalize_ratio);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, mmi, fft_ratio);
 
     GET_UPD_VALUE_3(psyscfgs, pcfg_upd, mmi, touch_info, center_x);
     GET_UPD_VALUE_3(psyscfgs, pcfg_upd, mmi, touch_info, center_y);
@@ -516,15 +548,21 @@ int32_t silfp_cfg_update_config(const void *buffer, const uint32_t len, cf_set_t
     GET_UPD_VALUE_3(psyscfgs, pcfg_upd, mmi, touch_info, c1_coverage_threshold);
     GET_UPD_VALUE_3(psyscfgs, pcfg_upd, mmi, touch_info, c2_coverage_threshold);
 
-    // aec update
-    LOG_MSG_VERBOSE("aec.updated = %d", pcfg_upd->aec.updated);
-    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, aec, left);
-    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, aec, right);
-    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, aec, max_loop);
-    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, aec, mean_min);
-    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, aec, mean_max);
-    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, aec, time);
-    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, aec, pclk);
+    // pp update
+    LOG_MSG_VERBOSE("pp.updated = %d", pcfg_upd->pp.updated);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, pp, aec_left);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, pp, aec_right);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, pp, aec_time);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, pp, cal_max_loop);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, pp, dead_a);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, pp, dead_b);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, pp, quality_cut);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, pp, quality_thr);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, pp, enroll_quality_chk_num);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, pp, enroll_post_num);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, pp, enroll_post_mask);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, pp, icon_ratio_z);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, pp, icon_ratio_m);
 
     // ft update
     LOG_MSG_VERBOSE("ft.updated = %d", pcfg_upd->ft.updated);
@@ -545,6 +583,13 @@ int32_t silfp_cfg_update_config(const void *buffer, const uint32_t len, cf_set_t
     GET_UPD_VALUE_2(psyscfgs, pcfg_upd, esd, int_reg);
     GET_UPD_VALUE_2(psyscfgs, pcfg_upd, esd, int_val);
     GET_UPD_VALUE_2(psyscfgs, pcfg_upd, esd, int_beacon);
+
+    // ci update
+    LOG_MSG_VERBOSE("ci.updated = %d", pcfg_upd->ci.updated);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, ci, auth_reverse_skip);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, ci, auth_reverse_grey);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, ci, enroll_loop);
+    GET_UPD_VALUE_2(psyscfgs, pcfg_upd, ci, enroll_skip);
 
     // pb agc update
     LOG_MSG_VERBOSE("pb.agc.updated = %d", pcfg_upd->pb.agc.updated);
@@ -585,6 +630,10 @@ int32_t silfp_cfg_update_config(const void *buffer, const uint32_t len, cf_set_t
     GET_UPD_VALUE_3(psyscfgs, pcfg_upd, pb, threshold, noise_coe);
     GET_UPD_VALUE_3(psyscfgs, pcfg_upd, pb, threshold, gray_prec);
     GET_UPD_VALUE_3(psyscfgs, pcfg_upd, pb, threshold, water_detect_threshold);
+    GET_UPD_VALUE_3(psyscfgs, pcfg_upd, pb, threshold, fail_threshold);
+    GET_UPD_VALUE_3(psyscfgs, pcfg_upd, pb, threshold, spd_flag);
+    GET_UPD_VALUE_3(psyscfgs, pcfg_upd, pb, threshold, samefinger_threshold);
+    GET_UPD_VALUE_3(psyscfgs, pcfg_upd, pb, threshold, identify_epay_threshold);
 
     offset += sizeof(cf_upd_set_t);
 

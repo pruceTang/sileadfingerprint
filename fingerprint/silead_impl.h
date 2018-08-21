@@ -88,8 +88,8 @@ int32_t sl_fp_set_nav_type(uint32_t mode);
 int32_t sl_fp_calibrate(void);
 int32_t sl_fp_get_enroll_num(uint32_t *num);
 int32_t sl_fp_ci_chk_finger(void);
-int32_t sl_fp_ci_adj_gain(void);
-int32_t sl_fp_ci_shot(void);
+int32_t sl_fp_ci_adj_gain(int32_t enroll);
+int32_t sl_fp_ci_shot(int32_t enroll);
 int32_t sl_fp_alg_set_param(uint32_t idx, void *buffer, uint32_t *plen, uint32_t *result);
 int32_t sl_fp_calibrate_step(uint32_t step);
 int32_t sl_fp_optic_test_snr(uint32_t *snr, uint32_t *noise, uint32_t *signal);
@@ -116,7 +116,7 @@ int32_t sl_fp_set_hbm_mode(uint32_t mode);
 int32_t sl_fp_set_brightness(uint32_t mode);
 int32_t sl_fp_get_finger_down_loop(void);
 int32_t sl_cb_optic_test_factory_quality();
-void sileadHypnusSetAction();
+void sl_fp_capture_pre();
 
 /**tp info struct for underglass fingerprint,add by pruce_tang_20180710 start **/
 int32_t sl_get_tp_touch_info(uint8_t mode);

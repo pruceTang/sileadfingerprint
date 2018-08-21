@@ -87,8 +87,8 @@ typedef struct silead_fp_handle {
     int32_t (*fp_calibrate)(void *buffer, uint32_t len);
     int32_t (*fp_calibrate2)(void);
     int32_t (*fp_ci_chk_finger)(void);
-    int32_t (*fp_ci_adj_gain)(void);
-    int32_t (*fp_ci_shot)(void);
+    int32_t (*fp_ci_adj_gain)(int32_t enroll);
+    int32_t (*fp_ci_shot)(int32_t enroll);
     int32_t (*fp_alg_set_param)(uint32_t cmd, void *buffer, uint32_t *plen, uint32_t *result);
     int32_t (*fp_chk_esd)(void);
     int32_t (*fp_get_otp)(uint32_t *otp1, uint32_t *otp2, uint32_t *otp3);
@@ -109,7 +109,7 @@ typedef struct silead_fp_handle {
     int32_t (*fp_test_cmd)(uint32_t cmd, void *buffer, uint32_t *plen, uint32_t *result);
 } silead_fp_handle_t;
 
-const silead_fp_handle_t * silfp_get_impl_handler(void);
+const silead_fp_handle_t * silfp_get_impl_handler(const void *ta_name);
 
 #endif /* __SILEAD_FP_H__ */
 

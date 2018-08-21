@@ -78,6 +78,19 @@ typedef enum sl_error {
     SL_ERROR_SNR_TEST_FAILED,              /* 1040 ERR: SNR test failed */
     SL_ERROR_M_BASE_QUALITY_FAILED,        /* 1041 ERR: black base image quality poor */
 
+    SL_ERROR_BASE_IMAGE_PARTIAL_FAILED,    /* 1042 ERR: base image partial */
+    SL_ERROR_BASE_IMAGE_DIRTY_FAILED,      /* 1043 ERR: base image dirty */
+    SL_ERROR_DATA_INVALID,                 /* 1044 ERR: data is invalid */
+    SL_ERROR_DATA_IS_NOT_READY,            /* 1045 ERR: data is not ready */
+    SL_ERROR_BUF_SIZE_TOO_SMALL,           /* 1046 ERR: Buffer size is too small */
+    SL_ERROR_CHECK_CRC_FAILED,             /* 1047 ERR: Check CRC fail */
+    SL_ERROR_GENERIC_FAILED,               /* 1048 ERR: Generic fail */
+    SL_ERROR_UNKNOWN_FAILED,               /* 1049 ERR: Unknown fail */
+    SL_ERROR_BASE_IMAGE_GLASS_DIRTY_FAILED,/* 1050 ERR: base image glass dirty */
+    SL_ERROR_AEC_TIMEOUT,                  /* 1051 ERR: AEC timeout */
+    SL_ERROR_BASE_IMAGE_CIRCLE_FAILED,     /* 1052 ERR: base image check circle fail */
+    SL_ERROR_CHECK_ICON_FAILED,            /* 1053 ERR: icon detected */
+
 } sl_error_t;
 
 #endif // __SILEAD_FINGERPRINT_ERROR_H__
